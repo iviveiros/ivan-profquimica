@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const groq = getGroq()
     const completion = await groq.chat.completions.create({
-      model: 'llama3-70b-8192',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: 'Você é um professor de Química experiente. Gere conteúdo didático preciso e adequado à série.' },
         { role: 'user', content: PROMPT_TEMPLATE(sistema, turma, topico) }
