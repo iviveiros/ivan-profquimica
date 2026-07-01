@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
 
 function getGroq() {
-  const { OpenAI } = require('openai')
-  return new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' })
+  const key = process.env.GROQ_API_KEY
+  if (!key) {
+    throw new Error('GROQ_API_KEY não configurada no servidor')
+  }
+  return new OpenAI({ apiKey: key, baseURL: 'https://api.groq.com/openai/v1' })
 }
 
 const PROMPT_TEMPLATE = (sistema: string, turma: string, topico: string) => `
@@ -77,7 +81,6 @@ export async function POST(request: NextRequest) {
 
     const content = completion.choices[0]?.message?.content || ''
 
-    // Separar as seções
     const sections = content.split('---').map((s: string) => s.trim()).filter(Boolean)
 
     let resumo = ''
@@ -86,9 +89,8 @@ export async function POST(request: NextRequest) {
 
     for (const section of sections) {
       if (section.startsWith('# Resumo') || section.startsWith('# Resumo da Aula')) {
-        // Pega tudo após o título
         const lines = section.split('\n')
-        lines.shift() // remove título
+        lines.shift()
         resumo = lines.join('\n').trim()
       } else if (section.startsWith('# Exercícios')) {
         const lines = section.split('\n')
@@ -101,7 +103,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fallback: se não conseguiu separar, usa o conteúdo completo
     if (!resumo && !exercicios && !avaliacao) {
       resumo = content
     }
