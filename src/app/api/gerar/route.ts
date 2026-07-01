@@ -1,13 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
-
-function getGroq() {
-  const key = process.env.GROQ_API_KEY
-  if (!key) {
-    throw new Error('GROQ_API_KEY não configurada no servidor')
-  }
-  return new OpenAI({ apiKey: key, baseURL: 'https://api.groq.com/openai/v1' })
-}
 
 const PROMPT_TEMPLATE = (sistema: string, turma: string, topico: string) => `
 Você é um professor de Química do sistema ${sistema}.
@@ -68,18 +59,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios: sistema, turma, topico' }, { status: 400 })
     }
 
-    const groq = getGroq()
-    const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: 'Você é um professor de Química experiente. Gere conteúdo didático preciso e adequado à série.' },
-        { role: 'user', content: PROMPT_TEMPLATE(sistema, turma, topico) }
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
+    const apiKey = process.env.GROQ_API_KEY
+    if (!apiKey) {
+      return NextResponse.json({ error: 'GROQ_API_KEY não configurada no servidor' }, { status: 500 })
+    }
+
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: 'Você é um professor de Química experiente. Gere conteúdo didático preciso e adequado à série.' },
+          { role: 'user', content: PROMPT_TEMPLATE(sistema, turma, topico) }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      }),
     })
 
-    const content = completion.choices[0]?.message?.content || ''
+    if (!res.ok) {
+      const errText = await res.text()
+      return NextResponse.json({ error: `Groq API (${res.status}): ${errText}` }, { status: 502 })
+    }
+
+    const data = await res.json()
+    const content = data.choices?.[0]?.message?.content || ''
 
     const sections = content.split('---').map((s: string) => s.trim()).filter(Boolean)
 
