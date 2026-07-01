@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-function getOpenAI() {
+function getGroq() {
   const { OpenAI } = require('openai')
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' })
 }
 
 const PROMPT_TEMPLATE = (sistema: string, turma: string, topico: string) => `
@@ -64,9 +64,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios: sistema, turma, topico' }, { status: 400 })
     }
 
-    const openai = getOpenAI()
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const groq = getGroq()
+    const completion = await groq.chat.completions.create({
+      model: 'llama3-70b-8192',
       messages: [
         { role: 'system', content: 'Você é um professor de Química experiente. Gere conteúdo didático preciso e adequado à série.' },
         { role: 'user', content: PROMPT_TEMPLATE(sistema, turma, topico) }
