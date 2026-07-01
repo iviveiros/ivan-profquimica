@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     const content = completion.choices[0]?.message?.content || ''
 
     // Separar as seções
-    const sections = content.split('---').map(s => s.trim()).filter(Boolean)
+    const sections = content.split('---').map((s: string) => s.trim()).filter(Boolean)
 
     let resumo = ''
     let exercicios = ''
