@@ -64,15 +64,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'GROQ_API_KEY não configurada no servidor' }, { status: 500 })
     }
 
-    // Debug: verificar se a key está correta
-    const keyPreview = apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 4)
-    if (apiKey.includes('sk-proj')) {
-      return NextResponse.json({ error: `ERRO: Está usando a chave antiga da OpenAI! Key começa com: ${keyPreview}` }, { status: 500 })
-    }
-    if (!apiKey.startsWith('gsk_')) {
-      return NextResponse.json({ error: `ERRO: Key não começa com gsk_. Key começa com: ${keyPreview}` }, { status: 500 })
-    }
-
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
