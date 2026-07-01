@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+function getOpenAI() {
+  const { OpenAI } = require('openai')
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+}
 
 const PROMPT_TEMPLATE = (sistema: string, turma: string, topico: string) => `
 Você é um professor de Química do sistema ${sistema}.
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios: sistema, turma, topico' }, { status: 400 })
     }
 
+    const openai = getOpenAI()
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
