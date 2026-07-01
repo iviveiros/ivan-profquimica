@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Estilo para impressão PDF */
+@media print {
+  nav { display: none !important; }
+  body { background: white; }
+  @page { margin: 2cm; }
+  .no-print { display: none !important; }
+}
