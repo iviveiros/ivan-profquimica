@@ -103,6 +103,14 @@ export default function Dashboard() {
               <span className="text-lg">👨‍🎓</span>
               <span className="font-medium text-zinc-700">Gerenciar alunos</span>
             </Link>
+            <Link href="/faltas" className="flex items-center gap-3 rounded-lg border p-3 text-sm hover:bg-emerald-50 transition-colors">
+              <span className="text-lg">📋</span>
+              <span className="font-medium text-zinc-700">Fazer chamada / faltas</span>
+            </Link>
+            <Link href="/notas" className="flex items-center gap-3 rounded-lg border p-3 text-sm hover:bg-emerald-50 transition-colors">
+              <span className="text-lg">📊</span>
+              <span className="font-medium text-zinc-700">Lançar notas</span>
+            </Link>
             <button onClick={() => window.print()} className="flex items-center gap-3 rounded-lg border p-3 text-sm hover:bg-emerald-50 transition-colors w-full text-left">
               <span className="text-lg">🖨️</span>
               <span className="font-medium text-zinc-700">Exportar relatório completo em PDF</span>

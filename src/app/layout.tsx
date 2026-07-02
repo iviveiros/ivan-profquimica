@@ -21,6 +21,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <NavLink href="/criar-aula">Criar Aula</NavLink>
               <NavLink href="/horarios">Horários</NavLink>
               <NavLink href="/alunos">Alunos</NavLink>
+              <NavLink href="/faltas">Chamada</NavLink>
+              <NavLink href="/notas">Notas</NavLink>
             </div>
           </div>
         </nav>
