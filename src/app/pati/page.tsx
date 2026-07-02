@@ -44,15 +44,15 @@ export default function Pati() {
     if (!texto.trim() || loading) return
     setInput("")
 
-    // Se tem ação pendente e usuário confirmou, executa direto sem chamar API
-    const t = texto.trim().toLowerCase()
+    // Detecta confirmação/cancelamento de ações pendentes
+    const primeiroInput = !messages.some(m => m.role === "assistant" && m.acoes)
     if (pendentes.length > 0) {
-      if (/^(sim|pode|confirma|ok|claro|pode sim|isso|pode lançar|execute)$/i.test(t)) {
-        return confirmarAcao()
-      }
-      if (/^(não|nao|cancela|pare|nenhum|nada)$/i.test(t)) {
-        return cancelarAcao()
-      }
+      const t = texto.trim().toLowerCase()
+      const palavrasConfirmacao = ["sim", "pode", "confirma", "ok", "claro", "isso", "manda", "faz", "executa"]
+      const eConfirmacao = palavrasConfirmacao.some(p => t === p || t.startsWith(p + " ") || t.startsWith(p + ","))
+      if (eConfirmacao) return confirmarAcao()
+      const palavrasNegacao = ["não", "nao", "cancela", "pare", "nenhum", "nada", "para"]
+      if (palavrasNegacao.some(p => t === p || t.startsWith(p + " ") || t.startsWith(p + ","))) return cancelarAcao()
     }
 
     setMessages(prev => [...prev, { role: "user", content: texto }])
@@ -60,11 +60,13 @@ export default function Pati() {
     setPendentes([])
 
     try {
-      const historico = messages.map(m => ({ role: m.role, content: m.content }))
+      const historico = [...messages.map(m => ({ role: m.role, content: m.content }))]
+      // Inclui ações pendentes como contexto extra pra API entender "sim"
+      const contextoAcoes = pendentes.length > 0 ? pendentes : null
       const res = await fetch("/api/pati", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mensagem: texto, historico, alunos, escola }),
+        body: JSON.stringify({ mensagem: texto, historico, alunos, escola, acoesPendentes: contextoAcoes }),
       })
       const data = await res.json()
       const acoes = extrairAcoes(data)

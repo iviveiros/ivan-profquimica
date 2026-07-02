@@ -4,9 +4,18 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY
 const MODEL = "llama-3.3-70b-versatile"
 
 export async function POST(req: NextRequest) {
-  const { mensagem, historico, alunos, escola } = await req.json()
+  const { mensagem, historico, alunos, escola, acoesPendentes } = await req.json()
   if (!mensagem?.trim()) {
     return NextResponse.json({ type: "pergunta", mensagem: "Diga algo!" })
+  }
+
+  // Se tem ações pendentes e usuário confirmou, executa direto sem chamar Groq
+  const t = mensagem.trim().toLowerCase()
+  if (acoesPendentes?.length) {
+    const palavrasConfirmacao = ["sim", "pode", "confirma", "ok", "claro", "isso", "manda", "faz", "executa"]
+    if (palavrasConfirmacao.some(p => t === p || t.startsWith(p + " ") || t.startsWith(p + ","))) {
+      return NextResponse.json({ type: "executar", mensagem: "✅ Executando...", acoes: acoesPendentes })
+    }
   }
 
   const alunosList = (alunos || []).map((a: any) => `- ${a.nome} (id:${a.id}) | ${a.turma_nome}`).join("\n")
