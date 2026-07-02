@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { getEscolas } from "@/services/escolas"
+import { getAlunosDaTurma } from "@/services/alunos"
+import { getNotas, salvarNota } from "@/services/notas"
+import type { AlunoBasico } from "@/services/alunos"
+import { ServiceError } from "@/services/supabase"
 
-type Aluno = { id: string; nome: string; turma_nome: string }
 type Nota = { id: string; aluno_id: string; disciplina: string; valor: string; descricao: string; bimestre: number }
 
 export default function Notas() {
-  const [alunos, setAlunos] = useState<Aluno[]>([])
+  const [alunos, setAlunos] = useState<AlunoBasico[]>([])
   const [escolas, setEscolas] = useState<{ id: string; nome: string }[]>([])
   const [escolaId, setEscolaId] = useState("")
   const [turma, setTurma] = useState("")
@@ -20,18 +23,19 @@ export default function Notas() {
   const [editValor, setEditValor] = useState("")
   const [editDesc, setEditDesc] = useState("")
   const [salvo, setSalvo] = useState(false)
+  const [erro, setErro] = useState("")
 
   useEffect(() => {
-    supabase.from("escolas").select("id, nome").then(({ data }) => {
+    getEscolas().then(data => {
       if (data?.length) { setEscolas(data); setEscolaId(data[0].id) }
-    })
+    }).catch(e => setErro("Erro ao carregar escolas"))
   }, [])
 
   useEffect(() => {
     if (!escolaId) return
-    supabase.from("alunos").select("id, nome, turma_nome").eq("escola_id", escolaId).order("nome").then(({ data }) => {
-      if (data) setAlunos(data)
-    })
+    getAlunosDaTurma(escolaId, "").then(data => {
+      if (data.length) setAlunos(data)
+    }).catch(e => setErro("Erro ao carregar alunos"))
   }, [escolaId])
 
   useEffect(() => {
@@ -40,36 +44,42 @@ export default function Notas() {
   }, [turma, disciplina, bimestre])
 
   async function carregarNotas() {
-    const { data: alunosTurma } = await supabase.from("alunos").select("id, nome, turma_nome")
-      .eq("escola_id", escolaId).eq("turma_nome", turma).order("nome")
-    if (!alunosTurma?.length) return
-    setAlunos(alunosTurma)
-
-    const ids = alunosTurma.map(a => a.id)
-    const { data: registros } = await supabase.from("notas")
-      .select("*").in("aluno_id", ids).eq("disciplina", disciplina).eq("bimestre", bimestre)
-    const mapV: Record<string, string> = {}
-    const mapD: Record<string, string> = {}
-    if (registros) for (const r of registros) { mapV[r.aluno_id] = r.valor; mapD[r.aluno_id] = r.descricao || "" }
-    setNotas(mapV)
-    setDescricoes(mapD)
+    setErro("")
+    try {
+      const alunosTurma = await getAlunosDaTurma(escolaId, turma)
+      if (!alunosTurma.length) return
+      setAlunos(alunosTurma)
+      const ids = alunosTurma.map(a => a.id)
+      const registros = await getNotas(ids, disciplina, bimestre)
+      const mapV: Record<string, string> = {}
+      const mapD: Record<string, string> = {}
+      for (const r of registros) { mapV[r.aluno_id] = r.valor; mapD[r.aluno_id] = r.descricao || "" }
+      setNotas(mapV)
+      setDescricoes(mapD)
+    } catch (e) {
+      setErro("Erro ao carregar notas")
+    }
   }
 
   function iniciarEdicao(alunoId: string, valor: string, desc: string) {
     setEditAluno(alunoId); setEditValor(valor); setEditDesc(desc)
   }
 
-  async function salvarNota() {
+  async function salvarNotaHandler() {
     if (!editAluno) return
-    await supabase.from("notas").delete().eq("aluno_id", editAluno).eq("disciplina", disciplina).eq("bimestre", bimestre)
-    await supabase.from("notas").insert({
-      aluno_id: editAluno, disciplina, valor: editValor, descricao: editDesc, bimestre,
-    })
-    setNotas(prev => ({ ...prev, [editAluno]: editValor }))
-    setDescricoes(prev => ({ ...prev, [editAluno]: editDesc }))
-    setEditAluno(null)
-    setSalvo(true)
-    setTimeout(() => setSalvo(false), 2000)
+    setErro("")
+    try {
+      await salvarNota({
+        aluno_id: editAluno, disciplina, valor: editValor, descricao: editDesc, bimestre,
+      })
+      setNotas(prev => ({ ...prev, [editAluno]: editValor }))
+      setDescricoes(prev => ({ ...prev, [editAluno]: editDesc }))
+      setEditAluno(null)
+      setSalvo(true)
+      setTimeout(() => setSalvo(false), 2000)
+    } catch (e) {
+      setErro("Erro ao salvar nota")
+    }
   }
 
   const turmasUnicas = [...new Set(alunos.map(a => a.turma_nome))].sort()
@@ -83,6 +93,13 @@ export default function Notas() {
         </div>
         {salvo && <span className="badge badge-emerald animate-fade-in">✓ Salvo</span>}
       </div>
+
+      {erro && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {erro}
+          <button onClick={() => setErro("")} className="ml-2 font-bold">×</button>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="card p-4 flex flex-wrap items-center gap-3">
@@ -160,7 +177,7 @@ export default function Notas() {
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={() => setEditAluno(null)} className="btn btn-ghost btn-sm">Cancelar</button>
-              <button onClick={salvarNota} className="btn btn-primary btn-sm">Salvar</button>
+              <button onClick={salvarNotaHandler} className="btn btn-primary btn-sm">Salvar</button>
             </div>
           </div>
         </div>

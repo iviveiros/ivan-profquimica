@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { getEscolas } from "@/services/escolas"
+import { getUltimasAulas, getAulasCount } from "@/services/aulas"
+import { getAlunosCount } from "@/services/alunos"
 
 const quickLinks = [
   { href: "/criar-aula", icon: "✦", label: "Gerar nova aula", desc: "Crie aulas completas com IA", color: "emerald" },
@@ -20,30 +22,32 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
-      const [aulasRes, escRes, aluRes, aulasRecentes] = await Promise.all([
-        supabase.from("aulas").select("id", { count: "exact", head: true }),
-        supabase.from("escolas").select("id"),
-        supabase.from("alunos").select("id"),
-        supabase.from("aulas").select("topico, created_at").order("created_at", { ascending: false }).limit(5),
-      ])
-      setStats({
-        aulas: aulasRes.count || 0,
-        escolas: escRes.data?.length || 0,
-        alunos: aluRes.data?.length || 0,
-      })
-      if (aulasRecentes.data) setUltimasAulas(aulasRecentes.data)
-
       try {
-        const gradeCache = localStorage.getItem("ivan-app-data")
-        if (gradeCache) {
-          const data = JSON.parse(gradeCache)
-          const escolaAtiva = data.escolas?.find((e: any) => e.id === data.escolaAtiva)
-          const dias = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"]
-          const hoje = new Date().getDay()
-          const aulasHoje = escolaAtiva?.grade?.[dias[hoje]]?.filter((a: any) => a !== null) || []
-          setProximas(aulasHoje.map((a: any) => `${a.inicio}-${a.fim} ${a.materia} ${a.turma}`))
+        const [aulasCount, escolas, aulasRecentes] = await Promise.all([
+          getAulasCount(),
+          getEscolas(),
+          getUltimasAulas(5),
+        ])
+        setStats({
+          aulas: aulasCount,
+          escolas: escolas.length,
+          alunos: 0,
+        })
+        setUltimasAulas(aulasRecentes)
+
+        const { getAlunosCount } = await import("@/services/alunos")
+        let totalAlunos = 0
+        for (const e of escolas) {
+          const c = await getAlunosCount(e.id)
+          totalAlunos += c
         }
-      } catch {}
+        setStats(prev => ({ ...prev, alunos: totalAlunos }))
+
+        const { getProximasAulas } = await import("@/services/horarios")
+        setProximas(getProximasAulas())
+      } catch (err: any) {
+        console.error("Erro ao carregar dashboard:", err)
+      }
       setLoading(false)
     }
     load()

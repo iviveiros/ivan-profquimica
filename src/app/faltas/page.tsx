@@ -1,14 +1,17 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { getEscolas } from "@/services/escolas"
+import { getAlunosDaTurma } from "@/services/alunos"
+import { getFaltas, salvarFalta, marcarTodosPresentes } from "@/services/faltas"
+import type { AlunoBasico } from "@/services/alunos"
+import { ServiceError } from "@/services/supabase"
 
-type Aluno = { id: string; nome: string; turma_nome: string }
 type FaltasMap = Record<string, boolean>
 
 export default function Faltas() {
-  const [alunos, setAlunos] = useState<Aluno[]>([])
+  const [alunos, setAlunos] = useState<AlunoBasico[]>([])
   const [escolas, setEscolas] = useState<{ id: string; nome: string }[]>([])
   const [escolaId, setEscolaId] = useState("")
   const [escolaNome, setEscolaNome] = useState("")
@@ -17,59 +20,71 @@ export default function Faltas() {
   const [faltas, setFaltas] = useState<FaltasMap>({})
   const [salvo, setSalvo] = useState(false)
   const [todasPresentes, setTodasPresentes] = useState(true)
+  const [erro, setErro] = useState("")
 
   useEffect(() => {
-    supabase.from("escolas").select("id, nome").then(({ data }) => {
+    getEscolas().then(data => {
       if (data?.length) { setEscolas(data); setEscolaId(data[0].id); setEscolaNome(data[0].nome) }
-    })
+    }).catch(e => setErro("Erro ao carregar escolas"))
   }, [])
 
   useEffect(() => {
     if (!escolaId) return
     const e = escolas.find(x => x.id === escolaId)
     if (e) setEscolaNome(e.nome)
-    supabase.from("alunos").select("id, nome, turma_nome").eq("escola_id", escolaId).order("nome").then(({ data }) => {
-      if (data) setAlunos(data)
-    })
+    getAlunosDaTurma(escolaId, "").then(data => {
+      if (data.length) setAlunos(data)
+    }).catch(e => setErro("Erro ao carregar alunos"))
   }, [escolaId])
 
   useEffect(() => {
     if (!turma || !data) return
-    supabase.from("alunos").select("id, nome, turma_nome").eq("escola_id", escolaId).eq("turma_nome", turma).order("nome").then(({ data }) => {
-      if (data) { setAlunos(data); carregarFaltas(data) }
-    })
+    getAlunosDaTurma(escolaId, turma).then(data => {
+      if (data.length) { setAlunos(data); carregarFaltas(data) }
+    }).catch(e => setErro("Erro ao carregar alunos da turma"))
   }, [turma, data])
 
-  async function carregarFaltas(alunosList: Aluno[]) {
+  async function carregarFaltas(alunosList: AlunoBasico[]) {
     const ids = alunosList.map(a => a.id)
     if (!ids.length) return
-    const { data: registros } = await supabase.from("faltas").select("aluno_id, presente").in("aluno_id", ids).eq("data", data)
-    const map: FaltasMap = {}
-    if (registros) for (const r of registros) map[r.aluno_id] = r.presente
-    setFaltas(map)
-    setTodasPresentes(Object.values(map).every(v => v !== false))
+    try {
+      const registros = await getFaltas(ids, data)
+      const map: FaltasMap = {}
+      for (const r of registros) map[r.aluno_id] = r.presente
+      setFaltas(map)
+      setTodasPresentes(Object.values(map).every(v => v !== false))
+    } catch (e) {
+      setErro("Erro ao carregar faltas")
+    }
   }
 
   async function togglePresenca(alunoId: string, presente: boolean) {
-    await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
-    if (!presente) {
-      await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: false })
+    setErro("")
+    try {
+      await salvarFalta(alunoId, data, presente)
+      setFaltas(prev => ({ ...prev, [alunoId]: presente }))
+      setTodasPresentes(Object.values({ ...faltas, [alunoId]: presente }).every(v => v !== false))
+      setSalvo(true)
+      setTimeout(() => setSalvo(false), 2000)
+    } catch (e) {
+      setErro("Erro ao salvar presença")
     }
-    setFaltas(prev => ({ ...prev, [alunoId]: presente }))
-    setTodasPresentes(Object.values({ ...faltas, [alunoId]: presente }).every(v => v !== false))
-    setSalvo(true)
-    setTimeout(() => setSalvo(false), 2000)
   }
 
-  async function marcarTodasPresentes() {
+  async function marcarTodasPresentesHandler() {
     if (!alunos.length) return
-    await supabase.from("faltas").delete().in("aluno_id", alunos.map(a => a.id)).eq("data", data)
-    const map: FaltasMap = {}
-    for (const a of alunos) map[a.id] = true
-    setFaltas(map)
-    setTodasPresentes(true)
-    setSalvo(true)
-    setTimeout(() => setSalvo(false), 2000)
+    setErro("")
+    try {
+      await marcarTodosPresentes(alunos.map(a => a.id), data)
+      const map: FaltasMap = {}
+      for (const a of alunos) map[a.id] = true
+      setFaltas(map)
+      setTodasPresentes(true)
+      setSalvo(true)
+      setTimeout(() => setSalvo(false), 2000)
+    } catch (e) {
+      setErro("Erro ao marcar todos presentes")
+    }
   }
 
   function imprimirChamada() {
@@ -127,6 +142,13 @@ export default function Faltas() {
         </div>
       </div>
 
+      {erro && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {erro}
+          <button onClick={() => setErro("")} className="ml-2 font-bold">×</button>
+        </div>
+      )}
+
       {/* Controls */}
       <div className="card p-4 flex flex-wrap items-center gap-3">
         <select value={escolaId} onChange={e => { setEscolaId(e.target.value) }} className="select text-sm">
@@ -138,7 +160,7 @@ export default function Faltas() {
         </select>
         <input type="date" value={data} onChange={e => setData(e.target.value)} className="select text-sm" />
         <div className="flex-1" />
-        <button onClick={marcarTodasPresentes} className="btn btn-secondary btn-sm">✓ Todos presentes</button>
+        <button onClick={marcarTodasPresentesHandler} className="btn btn-secondary btn-sm">✓ Todos presentes</button>
       </div>
 
       {/* List */}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+import { getEscolas } from "@/services/escolas"
 import { supabase } from "@/lib/supabase"
 
 type Message = {
@@ -21,12 +22,17 @@ export default function Pati() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    supabase.from("escolas").select("id, nome").limit(1).single().then(({ data }) => {
-      if (data) setEscola(data)
-    })
-    supabase.from("alunos").select("id, nome, turma_nome").order("nome").then(({ data }) => {
-      if (data) setAlunos(data)
-    })
+    async function init() {
+      try {
+        const escolas = await getEscolas()
+        if (escolas.length) setEscola(escolas[0])
+      } catch {}
+      try {
+        const { data } = await supabase.from("alunos").select("id, nome, turma_nome").order("nome")
+        if (data) setAlunos(data)
+      } catch {}
+    }
+    init()
   }, [])
 
   useEffect(() => {

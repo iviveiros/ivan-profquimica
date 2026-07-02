@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { supabase } from "@/lib/supabase"
+import { getEscolas } from "@/services/escolas"
+import { getAlunos, criarAluno, atualizarAluno, removerAluno, importarAlunos } from "@/services/alunos"
+import type { AlunoBasico } from "@/services/alunos"
+import { ServiceError } from "@/services/supabase"
 
-type Aluno = { id: string; nome: string; turma_nome: string; escola_id: string; observacoes?: string }
 type Turma = { id: string; nome: string }
 type Escola = { id: string; nome: string }
 
 export default function Alunos() {
-  const [alunos, setAlunos] = useState<Aluno[]>([])
+  const [alunos, setAlunos] = useState<AlunoBasico[]>([])
   const [turmas, setTurmas] = useState<Turma[]>([])
   const [escolas, setEscolas] = useState<Escola[]>([])
   const [escolaId, setEscolaId] = useState("")
@@ -20,46 +22,52 @@ export default function Alunos() {
   const [form, setForm] = useState({ nome: "", turma_nome: "", observacoes: "" })
   const [importText, setImportText] = useState("")
   const [importingPdf, setImportingPdf] = useState(false)
+  const [erro, setErro] = useState("")
 
   useEffect(() => {
-    supabase.from("escolas").select("id, nome").then(({ data }) => {
-      if (data?.length) { setEscolas(data); setEscolaId(data[0].id) }
-    })
+    getEscolas().then(data => {
+      if (data.length) { setEscolas(data); setEscolaId(data[0].id) }
+    }).catch(e => setErro(e instanceof ServiceError ? e.message : "Erro ao carregar escolas"))
   }, [])
 
   useEffect(() => {
     if (!escolaId) return
-    supabase.from("alunos").select("*").eq("escola_id", escolaId).order("nome").then(({ data }) => {
-      if (data) setAlunos(data)
-    })
-    supabase.from("turmas").select("id, nome").then(({ data }) => {
-      if (data) setTurmas(data)
-    })
+    getAlunos(escolaId).then(setAlunos).catch(e => setErro("Erro ao carregar alunos"))
   }, [escolaId])
 
   async function salvarAluno() {
     if (!form.nome.trim()) return
-    if (editId) {
-      await supabase.from("alunos").update({ nome: form.nome, turma_nome: form.turma_nome, observacoes: form.observacoes }).eq("id", editId)
-    } else {
-      await supabase.from("alunos").insert({ nome: form.nome, turma_nome: form.turma_nome, escola_id: escolaId, observacoes: form.observacoes })
+    setErro("")
+    try {
+      if (editId) {
+        await atualizarAluno(editId, { nome: form.nome, turma_nome: form.turma_nome, observacoes: form.observacoes })
+      } else {
+        await criarAluno({ nome: form.nome, turma_nome: form.turma_nome, escola_id: escolaId, observacoes: form.observacoes })
+      }
+      setShowForm(false); setEditId(null); setForm({ nome: "", turma_nome: "", observacoes: "" })
+      const data = await getAlunos(escolaId)
+      setAlunos(data)
+    } catch (e) {
+      setErro(e instanceof ServiceError ? e.message : "Erro ao salvar aluno")
     }
-    setShowForm(false); setEditId(null); setForm({ nome: "", turma_nome: "", observacoes: "" })
-    const { data } = await supabase.from("alunos").select("*").eq("escola_id", escolaId).order("nome")
-    if (data) setAlunos(data)
   }
 
-  function editarAluno(a: Aluno) {
+  function editarAluno(a: AlunoBasico) {
     setEditId(a.id); setForm({ nome: a.nome, turma_nome: a.turma_nome, observacoes: a.observacoes || "" }); setShowForm(true)
   }
 
-  async function removerAluno(id: string) {
+  async function removerAlunoHandler(id: string) {
     if (!confirm("Remover este aluno?")) return
-    await supabase.from("alunos").delete().eq("id", id)
-    setAlunos(prev => prev.filter(a => a.id !== id))
+    setErro("")
+    try {
+      await removerAluno(id)
+      setAlunos(prev => prev.filter(a => a.id !== id))
+    } catch (e) {
+      setErro("Erro ao remover aluno")
+    }
   }
 
-  async function importarAlunos() {
+  async function importarAlunosHandler() {
     const linhas = importText.split("\n").map(l => l.trim()).filter(Boolean)
     let turmaAtual = ""
     const toInsert: { nome: string; turma_nome: string; escola_id: string }[] = []
@@ -76,10 +84,15 @@ export default function Alunos() {
     }
 
     if (!toInsert.length) { alert("Nenhum aluno encontrado para importar."); return }
-    await supabase.from("alunos").insert(toInsert)
-    setImportText(""); setShowImport(false)
-    const { data } = await supabase.from("alunos").select("*").eq("escola_id", escolaId).order("nome")
-    if (data) setAlunos(data)
+    setErro("")
+    try {
+      await importarAlunos(toInsert)
+      setImportText(""); setShowImport(false)
+      const data = await getAlunos(escolaId)
+      setAlunos(data)
+    } catch (e) {
+      setErro("Erro ao importar alunos")
+    }
   }
 
   async function importarPdf(file: File) {
@@ -112,17 +125,17 @@ export default function Alunos() {
         setImportText(texto)
       }
     } catch (err: any) {
-      alert("Erro ao ler PDF: " + err.message)
+      setErro("Erro ao ler PDF: " + err.message)
     } finally {
       setImportingPdf(false)
     }
   }
 
   function gerarListaChamada() {
-    const turmasAgrupadas = alunos.reduce((acc: Record<string, Aluno[]>, a) => {
+    const turmasAgrupadas = alunos.reduce((acc: Record<string, AlunoBasico[]>, a) => {
       if (!acc[a.turma_nome]) acc[a.turma_nome] = []
       acc[a.turma_nome].push(a); return acc
-    }, {} as Record<string, Aluno[]>)
+    }, {} as Record<string, AlunoBasico[]>)
 
     const turma = filtroTurma || Object.keys(turmasAgrupadas)[0]
     if (!turma || !alunos.length) { alert("Selecione uma turma com alunos."); return }
@@ -149,7 +162,7 @@ export default function Alunos() {
     win?.print()
   }
 
-  const turmasAgrupadas = alunos.reduce((acc: Record<string, Aluno[]>, a) => {
+  const turmasAgrupadas = alunos.reduce((acc: Record<string, AlunoBasico[]>, a) => {
     if (!acc[a.turma_nome]) acc[a.turma_nome] = []
     acc[a.turma_nome].push(a); return acc
   }, {})
@@ -170,6 +183,13 @@ export default function Alunos() {
         </div>
       </div>
 
+      {erro && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {erro}
+          <button onClick={() => setErro("")} className="ml-2 font-bold">×</button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="card p-4 flex flex-wrap items-center gap-3">
         <select value={escolaId} onChange={e => setEscolaId(e.target.value)} className="select text-sm min-w-[140px]">
@@ -178,8 +198,7 @@ export default function Alunos() {
         <div className="h-5 w-px bg-zinc-200" />
         <select value={filtroTurma} onChange={e => setFiltroTurma(e.target.value)} className="select text-sm min-w-[140px]">
           <option value="">Todas as turmas</option>
-          {turmas.map(t => <option key={t.id} value={t.nome}>{t.nome}</option>)}
-          {Object.keys(turmasAgrupadas).filter(t => !turmas.some(tp => tp.nome === t)).map(t => (
+          {Object.keys(turmasAgrupadas).sort().map(t => (
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
@@ -221,7 +240,7 @@ export default function Alunos() {
                     </div>
                     <div className="flex gap-1 shrink-0">
                       <button onClick={() => editarAluno(a)} className="btn btn-ghost btn-sm">Editar</button>
-                      <button onClick={() => removerAluno(a.id)} className="btn btn-ghost btn-sm text-red-500 hover:bg-red-50">Remover</button>
+                      <button onClick={() => removerAlunoHandler(a.id)} className="btn btn-ghost btn-sm text-red-500 hover:bg-red-50">Remover</button>
                     </div>
                   </div>
                 ))}
@@ -243,8 +262,7 @@ export default function Alunos() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-zinc-500">Turma</label>
-                <input type="text" value={form.turma_nome} onChange={e => setForm({ ...form, turma_nome: e.target.value })} className="input" list="turmas-list" />
-                <datalist id="turmas-list">{turmas.map(t => <option key={t.id} value={t.nome} />)}</datalist>
+                <input type="text" value={form.turma_nome} onChange={e => setForm({ ...form, turma_nome: e.target.value })} className="input" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-zinc-500">Observações</label>
@@ -277,7 +295,7 @@ export default function Alunos() {
             <p className="mt-2 text-xs text-zinc-400">Use TURMA em maiúsculo para agrupar. Ou: Nome, Turma</p>
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowImport(false)} className="btn btn-ghost btn-sm">Cancelar</button>
-              <button onClick={importarAlunos} className="btn btn-primary btn-sm">Importar</button>
+              <button onClick={importarAlunosHandler} className="btn btn-primary btn-sm">Importar</button>
             </div>
           </div>
         </div>

@@ -3,8 +3,41 @@ import { NextRequest, NextResponse } from 'next/server'
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const MODEL = "llama-3.3-70b-versatile"
 
+// In-memory rate limiter: max 10 requests per minute per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_MAX = 10
+const RATE_LIMIT_WINDOW = 60_000 // 1 minute
+
+function rateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false
+  entry.count++
+  return true
+}
+
 export async function POST(req: NextRequest) {
-  const { mensagem, historico, alunos, escola, acoesPendentes } = await req.json()
+  // Rate limit check
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown"
+  if (!rateLimit(ip)) {
+    return NextResponse.json(
+      { type: "erro", mensagem: "Muitas requisições. Aguarde um minuto antes de perguntar de novo." },
+      { status: 429 }
+    )
+  }
+
+  let body
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ type: "pergunta", mensagem: "Formato inválido." })
+  }
+
+  const { mensagem, historico, alunos, escola, acoesPendentes } = body
   if (!mensagem?.trim()) {
     return NextResponse.json({ type: "pergunta", mensagem: "Diga algo!" })
   }

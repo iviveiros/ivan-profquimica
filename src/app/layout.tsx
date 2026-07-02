@@ -64,9 +64,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const label = navItems.find(n => n.href === href)?.label || href
   return (
     <Link
       href={href}
+      aria-label={label}
       className="nav-link inline-flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap"
     >
       {children}

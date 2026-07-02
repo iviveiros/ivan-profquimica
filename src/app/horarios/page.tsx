@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Plus, Trash2 } from "lucide-react"
-
-type Aula = { inicio: string; fim: string; materia: string; turma: string }
-type DiaSemana = "segunda" | "terca" | "quarta" | "quinta" | "sexta"
-type Grade = Record<DiaSemana, (Aula | null)[]>
+import { getAppData, saveAppData, loadGradesFromSupabase, syncGradesToSupabase } from "@/services/horarios"
+import type { Aula, DiaSemana, Grade } from "@/services/horarios"
 
 const DIAS: { key: DiaSemana; label: string }[] = [
   { key: "segunda", label: "Segunda" },
@@ -31,14 +29,12 @@ function gradeVazia(): Grade {
   return g
 }
 
-type Escola = { id: string; nome: string; grade: Grade }
-
-const ESCOLA_IEFA: Escola = {
+const ESCOLA_IEFA = {
   id: "iefa", nome: "IEFA",
   grade: {
-    segunda: [null, null, null, null, null, null, null],
-    terca: [null, null, null, null, null, null, null],
-    quarta: [null, null, null, null, null, null, null],
+    segunda: [null, null, null, null, null, null, null] as (Aula | null)[],
+    terca: [null, null, null, null, null, null, null] as (Aula | null)[],
+    quarta: [null, null, null, null, null, null, null] as (Aula | null)[],
     quinta: [
       { inicio: "07:00", fim: "07:45", materia: "Química", turma: "3ª EM" },
       { inicio: "07:45", fim: "08:30", materia: "Química", turma: "1ª EM" },
@@ -57,10 +53,11 @@ const ESCOLA_IEFA: Escola = {
       { inicio: "11:05", fim: "11:50", materia: "Química", turma: "3ª EM" },
       { inicio: "11:50", fim: "12:35", materia: "Química", turma: "1ª EM" },
     ],
-  },
+  } as Grade,
 }
 
-type AppData = { escolas: Escola[]; escolaAtiva: string }
+type EscolaLocal = { id: string; nome: string; grade: Grade }
+type AppData = { escolas: EscolaLocal[]; escolaAtiva: string }
 
 export default function Horarios() {
   const [appData, setAppData] = useState<AppData>({ escolas: [], escolaAtiva: "" })
@@ -70,22 +67,24 @@ export default function Horarios() {
   const [novaEscolaNome, setNovaEscolaNome] = useState("")
   const [mostrarNovaEscola, setMostrarNovaEscola] = useState(false)
   const [turmasList, setTurmasList] = useState<string[]>([])
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState("")
 
   useEffect(() => {
-    const saved = localStorage.getItem("ivan-app-data")
-    if (saved) {
-      try { setAppData(JSON.parse(saved)) } catch {}
+    const stored = getAppData()
+    if (stored) {
+      setAppData(stored)
     } else {
       const initial: AppData = { escolas: [ESCOLA_IEFA], escolaAtiva: "iefa" }
       setAppData(initial)
-      localStorage.setItem("ivan-app-data", JSON.stringify(initial))
+      saveAppData(initial)
     }
     const t = localStorage.getItem("ivan-turmas")
     if (t) { try { setTurmasList(JSON.parse(t)) } catch {} }
   }, [])
 
   const persistAppData = useCallback((data: AppData) => {
-    localStorage.setItem("ivan-app-data", JSON.stringify(data))
+    saveAppData(data)
   }, [])
 
   const escolaAtual = appData.escolas.find(e => e.id === appData.escolaAtiva)
@@ -106,7 +105,7 @@ export default function Horarios() {
     if (!novaEscolaNome.trim()) return
     const id = novaEscolaNome.toLowerCase().replace(/\s+/g, "-")
     if (appData.escolas.some(e => e.id === id)) { alert("Já existe uma escola com esse nome."); return }
-    const nova: Escola = { id, nome: novaEscolaNome.trim(), grade: gradeVazia() }
+    const nova: EscolaLocal = { id, nome: novaEscolaNome.trim(), grade: gradeVazia() }
     const data = { escolas: [...appData.escolas, nova], escolaAtiva: id }
     setAppData(data); persistAppData(data)
     setNovaEscolaNome(""); setMostrarNovaEscola(false)
@@ -147,6 +146,22 @@ export default function Horarios() {
     setEditCelula(null)
   }
 
+  async function syncToCloud() {
+    setSyncing(true)
+    setSyncMsg("")
+    try {
+      const data = getAppData()
+      if (data) {
+        await syncGradesToSupabase(data)
+        setSyncMsg("✅ Sincronizado com a nuvem!")
+      }
+    } catch {
+      setSyncMsg("Erro ao sincronizar")
+    }
+    setSyncing(false)
+    setTimeout(() => setSyncMsg(""), 3000)
+  }
+
   if (!escolaAtual) return (
     <div className="card p-12 text-center">
       <p className="text-zinc-400">Nenhuma escola cadastrada.</p>
@@ -160,16 +175,23 @@ export default function Horarios() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {syncMsg && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 text-center">{syncMsg}</div>}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">◈ Horários</h1>
           <p className="mt-1.5 text-sm text-zinc-500">Grade semanal de aulas — {escolaAtual.nome}</p>
         </div>
-        <button onClick={() => setEditando(!editando)}
-          className={`btn ${editando ? "btn-primary" : "btn-secondary"}`}>
-          {editando ? "✅ Concluir" : "✏️ Editar"}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={syncToCloud} disabled={syncing} className="btn btn-secondary btn-sm" title="Sincronizar horários com a nuvem">
+            {syncing ? "Sincronizando..." : "☁️ Sync"}
+          </button>
+          <button onClick={() => setEditando(!editando)}
+            className={`btn ${editando ? "btn-primary" : "btn-secondary"}`}>
+            {editando ? "✅ Concluir" : "✏️ Editar"}
+          </button>
+        </div>
       </div>
 
       {/* School Selector */}
