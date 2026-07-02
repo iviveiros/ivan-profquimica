@@ -52,7 +52,7 @@ export default function Pati() {
       if (data.type === "executar" && data.acao) {
         await executarAcao(data.acao)
         setMessages(prev => [...prev, { role: "assistant", content: data.mensagem || "✅ Feito!" }])
-      } else if (data.type === "confirmacao" && data.acao) {
+      } else if ((data.type === "confirmacao" || data.type === "pergunta") && data.acao) {
         setPendente(data.acao)
         setMessages(prev => [...prev, { role: "assistant", content: data.mensagem, acao: data.acao }])
       } else {

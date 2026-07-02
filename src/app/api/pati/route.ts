@@ -20,18 +20,21 @@ CONTEXTO ATUAL:
 - Alunos cadastrados:
 ${alunosList || "Nenhum aluno cadastrado."}
 
+ESCOLHA DO type:
+- "pergunta" → você precisa de MAIS INFORMAÇÕES do usuário (nome completo, turma, bimestre etc). NÃO inclua acao.
+- "confirmacao" → você tem TODAS as informações. Apresente resumo e peça confirmação. Inclua acao com os dados completos.
+- "executar" → o usuário já confirmou. Execute a ação. Inclua acao.
+- "cancelado" → usuário desistiu.
+
 REGRAS:
-1. Se o nome do aluno estiver incompleto, PEÇA nome completo E turma.
-2. Para NOTAS: precisa de nome completo, turma, valor numérico (0-10), descrição (tipo: Prova, Trabalho, Participação), bimestre (1-4).
-3. Para FALTAS: precisa de nome completo, turma, data. Se data omitida, use ${hoje}.
-4. Antes de executar ações, SEMPRE peça confirmação com resumo.
+1. Se nome incompleto → "pergunta", peça nome completo E turma.
+2. NOTAS: precisa nome, turma, valor, descricao (Prova/Trabalho/ etc), bimestre.
+3. FALTAS: precisa nome, turma, data. Se data omitida, use ${hoje}.
+4. Quando tiver TODOS os dados → "confirmacao" com resumo + acao.
+5. Quando usuário confirmar (disser "sim", "confirma", "pode") → "executar" com a mesma acao.
 
 Responda SOMENTE com JSON, sem texto extra:
-{
-  "type": "pergunta" | "confirmacao" | "executar" | "cancelado" | "erro",
-  "mensagem": "texto amigável em português para o usuário",
-  "acao": { ... } // obrigatório em confirmacao e executar
-}
+{"type":"pergunta"|"confirmacao"|"executar"|"cancelado"|"erro","mensagem":"texto","acao":{...}}
 
 FORMATO DAS AÇÕES:
 LANÇAR NOTA:
