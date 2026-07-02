@@ -90,16 +90,29 @@ Erro: {"type":"erro","mensagem":"explique o erro"}`
 }
 
 function extrairJson(texto: string): any {
-  try {
-    return JSON.parse(texto)
-  } catch {}
-  const match = texto.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
-  if (match) {
-    try { return JSON.parse(match[1]) } catch {}
+  const trimado = texto.trim()
+  try { return JSON.parse(trimado) } catch {}
+
+  const mdMatch = trimado.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (mdMatch) {
+    try { return JSON.parse(mdMatch[1].trim()) } catch {}
   }
-  const match2 = texto.match(/\{[\s\S]*?"type"[\s\S]*?"mensagem"[\s\S]*?\}/)
-  if (match2) {
-    try { return JSON.parse(match2[0]) } catch {}
+
+  const start = trimado.indexOf('{')
+  if (start === -1) return null
+
+  let depth = 0, inStr = false, escaped = false
+  for (let i = start; i < trimado.length; i++) {
+    const ch = trimado[i]
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\' && inStr) { escaped = true; continue }
+    if (ch === '"') { inStr = !inStr; continue }
+    if (inStr) continue
+    if (ch === '{') depth++
+    if (ch === '}') depth--
+    if (depth === 0) {
+      try { return JSON.parse(trimado.substring(start, i + 1)) } catch { return null }
+    }
   }
   return null
 }
