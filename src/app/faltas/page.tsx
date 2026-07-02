@@ -1,29 +1,33 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
+import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 
 type Aluno = { id: string; nome: string; turma_nome: string }
-type FaltasMap = Record<string, boolean> // aluno_id -> presente
+type FaltasMap = Record<string, boolean>
 
 export default function Faltas() {
   const [alunos, setAlunos] = useState<Aluno[]>([])
   const [escolas, setEscolas] = useState<{ id: string; nome: string }[]>([])
   const [escolaId, setEscolaId] = useState("")
+  const [escolaNome, setEscolaNome] = useState("")
   const [turma, setTurma] = useState("")
   const [data, setData] = useState(new Date().toISOString().split("T")[0])
   const [faltas, setFaltas] = useState<FaltasMap>({})
   const [salvo, setSalvo] = useState(false)
-  const [todasPresentes, setTodasPresentes] = useState(true)
+  const printRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.from("escolas").select("id, nome").then(({ data }) => {
-      if (data?.length) { setEscolas(data); setEscolaId(data[0].id) }
+      if (data?.length) { setEscolas(data); setEscolaId(data[0].id); setEscolaNome(data[0].nome) }
     })
   }, [])
 
   useEffect(() => {
     if (!escolaId) return
+    const e = escolas.find(x => x.id === escolaId)
+    if (e) setEscolaNome(e.nome)
     supabase.from("alunos").select("id, nome, turma_nome").eq("escola_id", escolaId).order("nome").then(({ data }) => {
       if (data) setAlunos(data)
     })
@@ -32,27 +36,20 @@ export default function Faltas() {
   useEffect(() => {
     if (!turma || !data) return
     supabase.from("alunos").select("id, nome, turma_nome").eq("escola_id", escolaId).eq("turma_nome", turma).order("nome").then(({ data }) => {
-      if (data) {
-        setAlunos(data)
-        carregarFaltas(data, data)
-      }
+      if (data) { setAlunos(data); carregarFaltas(data) }
     })
   }, [turma, data])
 
-  async function carregarFaltas(alunosList: Aluno[], _orig?: Aluno[]) {
+  async function carregarFaltas(alunosList: Aluno[]) {
     const ids = alunosList.map(a => a.id)
     if (!ids.length) return
     const { data: registros } = await supabase.from("faltas").select("aluno_id, presente").in("aluno_id", ids).eq("data", data)
     const map: FaltasMap = {}
-    if (registros) {
-      for (const r of registros) map[r.aluno_id] = r.presente
-    }
+    if (registros) for (const r of registros) map[r.aluno_id] = r.presente
     setFaltas(map)
-    setTodasPresentes(Object.values(map).every(v => v !== false))
   }
 
   async function togglePresenca(alunoId: string, presente: boolean) {
-    // Remove registro se estiver marcando presença (padrão), senão insere falta
     if (presente) {
       await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
     } else {
@@ -68,10 +65,46 @@ export default function Faltas() {
     await supabase.from("faltas").delete().in("aluno_id", alunos.map(a => a.id)).eq("data", data)
     const map: FaltasMap = {}
     for (const a of alunos) map[a.id] = true
-    setFaltas(map)
-    setTodasPresentes(true)
-    setSalvo(true)
+    setFaltas(map); setSalvo(true)
     setTimeout(() => setSalvo(false), 2000)
+  }
+
+  function imprimirChamada() {
+    const presentes = alunosFiltrados.filter(a => faltas[a.id] ?? true)
+    const ausentes = alunosFiltrados.filter(a => !(faltas[a.id] ?? true))
+    const win = window.open("", "_blank")
+    win?.document.write(`
+      <html><head><meta charset="utf-8"><title>Chamada - ${turma}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12pt; margin: 2cm; }
+        h1 { text-align: center; font-size: 16pt; margin-bottom: 2pt; }
+        h2 { text-align: center; font-size: 11pt; color: #666; font-weight: normal; margin-top: 0; margin-bottom: 16pt; }
+        h3 { font-size: 12pt; margin-top: 16pt; margin-bottom: 6pt; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #999; padding: 4pt 8pt; text-align: left; font-size: 11pt; }
+        th { background: #059669; color: white; font-weight: bold; }
+        .num { width: 30px; text-align: center; }
+        .check { width: 50px; text-align: center; }
+        .presente { color: #059669; }
+        .falta { color: #dc2626; }
+        .assinatura { margin-top: 40pt; text-align: center; }
+        .assinatura div { margin-top: 60pt; border-top: 1px solid #999; display: inline-block; padding: 0 40pt; }
+      </style></head><body>
+      <h1>CHAMADA — ${escolaNome}</h1>
+      <h2>${turma} · ${new Date(data).toLocaleDateString("pt-BR")}</h2>
+      <h3>✅ Presentes (${presentes.length})</h3>
+      <table><tr><th class="num">Nº</th><th>Nome</th><th class="check">Presente</th></tr>
+      ${presentes.map((a, i) => `<tr><td class="num">${i + 1}</td><td>${a.nome}</td><td class="check presente">✓</td></tr>`).join("")}
+      </table>
+      <h3 style="margin-top:20pt">❌ Ausentes (${ausentes.length})</h3>
+      <table><tr><th class="num">Nº</th><th>Nome</th><th class="check">Falta</th></tr>
+      ${ausentes.map((a, i) => `<tr><td class="num">${i + 1}</td><td>${a.nome}</td><td class="check falta">✗</td></tr>`).join("")}
+      </table>
+      <div class="assinatura"><div>Assinatura do Professor</div></div>
+      </body></html>
+    `)
+    win?.document.close()
+    win?.print()
   }
 
   const turmasUnicas = [...new Set(alunos.map(a => a.turma_nome))].sort()
@@ -84,11 +117,14 @@ export default function Faltas() {
           <h1 className="text-2xl font-bold text-slate-900">📋 Chamada / Faltas</h1>
           <p className="mt-1 text-sm text-slate-500">Registro diário de presença</p>
         </div>
-        {salvo && <span className="badge badge-emerald animate-fade-in">✓ Salvo</span>}
+        <div className="flex items-center gap-2">
+          {salvo && <span className="badge badge-emerald animate-fade-in">✓ Salvo</span>}
+          <button onClick={imprimirChamada} className="btn btn-outline">🖨️ Imprimir Chamada</button>
+        </div>
       </div>
 
       <div className="card p-4 flex flex-wrap items-center gap-3">
-        <select value={escolaId} onChange={e => setEscolaId(e.target.value)} className="select text-sm">
+        <select value={escolaId} onChange={e => { setEscolaId(e.target.value); data } } className="select text-sm"> 
           {escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
         </select>
         <select value={turma} onChange={e => setTurma(e.target.value)} className="select text-sm">
@@ -96,51 +132,53 @@ export default function Faltas() {
           {turmasUnicas.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
         <input type="date" value={data} onChange={e => setData(e.target.value)} className="select text-sm" />
-        <button onClick={marcarTodasPresentes} className="btn btn-outline text-xs ml-auto">✓ Todos presentes</button>
+        <button onClick={marcarTodasPresentes} className="btn btn-outline text-xs">✓ Todos presentes</button>
       </div>
 
-      {!alunosFiltrados.length ? (
-        <div className="card p-12 text-center text-slate-400">
-          Selecione uma turma para fazer a chamada
-        </div>
-      ) : (
-        <div className="card overflow-hidden">
-          <div className="divide-y divide-slate-100">
-            {alunosFiltrados.map((a, i) => {
-              const presente = faltas[a.id] ?? true
-              return (
-                <div key={a.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-300 w-5">{i + 1}</span>
-                    <p className="text-sm font-medium text-slate-800">{a.nome}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => togglePresenca(a.id, true)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        presente ? "bg-emerald-100 text-emerald-700 border border-emerald-300" : "bg-white text-slate-400 border border-slate-200 hover:bg-emerald-50"
-                      }`}
-                    >
-                      ✅ Presente
-                    </button>
-                    <button
-                      onClick={() => togglePresenca(a.id, false)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        !presente ? "bg-red-100 text-red-700 border border-red-300" : "bg-white text-slate-400 border border-slate-200 hover:bg-red-50"
-                      }`}
-                    >
-                      ❌ Falta
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+      <div ref={printRef}>
+        {!alunosFiltrados.length ? (
+          <div className="card p-12 text-center text-slate-400">
+            Selecione uma turma para fazer a chamada
           </div>
-          <div className="border-t border-slate-100 px-5 py-3 text-sm text-slate-500 bg-slate-50/50">
-            {alunosFiltrados.filter(a => !(faltas[a.id] ?? true)).length} faltas · {alunosFiltrados.filter(a => faltas[a.id] ?? true).length} presentes
+        ) : (
+          <div className="card overflow-hidden">
+            <div className="divide-y divide-slate-100">
+              {alunosFiltrados.map((a, i) => {
+                const presente = faltas[a.id] ?? true
+                return (
+                  <div key={a.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <span className="text-xs text-slate-300 w-5 shrink-0">{i + 1}</span>
+                      <Link href={`/aluno/${a.id}`} className="text-sm font-medium text-slate-800 hover:text-emerald-700 hover:underline truncate">
+                        {a.nome}
+                      </Link>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => togglePresenca(a.id, true)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          presente ? "bg-emerald-100 text-emerald-700 border border-emerald-300" : "bg-white text-slate-400 border border-slate-200 hover:bg-emerald-50"
+                        }`}
+                      >✅ Presente</button>
+                      <button
+                        onClick={() => togglePresenca(a.id, false)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          !presente ? "bg-red-100 text-red-700 border border-red-300" : "bg-white text-slate-400 border border-slate-200 hover:bg-red-50"
+                        }`}
+                      >❌ Falta</button>
+                      <Link href={`/aluno/${a.id}`} className="btn btn-ghost text-xs px-2 py-1" title="Ver perfil">👤</Link>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="border-t border-slate-100 px-5 py-3 text-sm text-slate-500 bg-slate-50/50 flex justify-between">
+              <span>{alunosFiltrados.length} alunos</span>
+              <span>{alunosFiltrados.filter(a => !(faltas[a.id] ?? true)).length} faltas · {alunosFiltrados.filter(a => faltas[a.id] ?? true).length} presentes</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

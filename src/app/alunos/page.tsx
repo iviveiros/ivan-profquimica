@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import * as pdfjs from "pdfjs-dist"
 
@@ -187,7 +188,7 @@ export default function Alunos() {
                   <div key={a.id} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-slate-300 w-5">{i + 1}</span>
-                      <p className="text-sm font-medium text-slate-800">{a.nome}</p>
+                      <Link href={`/aluno/${a.id}`} className="text-sm font-medium text-slate-800 hover:text-emerald-700 hover:underline">{a.nome}</Link>
                       {a.observacoes && <span className="text-xs text-slate-400">({a.observacoes})</span>}
                     </div>
                     <div className="flex gap-1">
