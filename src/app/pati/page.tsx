@@ -85,28 +85,31 @@ export default function Pati() {
   async function executarAcao(acao: any) {
     try {
       if (acao.tipo === "lancar_nota") {
-        await supabase.from("notas").upsert({
+        await supabase.from("notas").delete().eq("aluno_id", acao.aluno_id).eq("disciplina", acao.disciplina || "Química").eq("bimestre", acao.bimestre || 1)
+        await supabase.from("notas").insert({
           aluno_id: acao.aluno_id,
           disciplina: acao.disciplina || "Química",
           valor: acao.valor,
           descricao: acao.descricao || "",
           bimestre: acao.bimestre || 1,
-        }, { onConflict: "aluno_id,disciplina,bimestre" })
+        })
       } else if (acao.tipo === "marcar_falta" && acao.alunos) {
         for (const aluno of acao.alunos) {
-          await supabase.from("faltas").upsert({
+          await supabase.from("faltas").delete().eq("aluno_id", aluno.id).eq("data", acao.data || new Date().toISOString().split("T")[0])
+          await supabase.from("faltas").insert({
             aluno_id: aluno.id,
             data: acao.data || new Date().toISOString().split("T")[0],
             presente: false,
-          }, { onConflict: "aluno_id,data" })
+          })
         }
       } else if (acao.tipo === "marcar_presenca" && acao.alunos) {
         for (const aluno of acao.alunos) {
-          await supabase.from("faltas").upsert({
+          await supabase.from("faltas").delete().eq("aluno_id", aluno.id).eq("data", acao.data || new Date().toISOString().split("T")[0])
+          await supabase.from("faltas").insert({
             aluno_id: aluno.id,
             data: acao.data || new Date().toISOString().split("T")[0],
             presente: true,
-          }, { onConflict: "aluno_id,data" })
+          })
         }
       }
     } catch (err: any) {

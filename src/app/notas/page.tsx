@@ -61,9 +61,10 @@ export default function Notas() {
 
   async function salvarNota() {
     if (!editAluno) return
-    await supabase.from("notas").upsert({
+    await supabase.from("notas").delete().eq("aluno_id", editAluno).eq("disciplina", disciplina).eq("bimestre", bimestre)
+    await supabase.from("notas").insert({
       aluno_id: editAluno, disciplina, valor: editValor, descricao: editDesc, bimestre,
-    }, { onConflict: "aluno_id,disciplina,bimestre" })
+    })
     setNotas(prev => ({ ...prev, [editAluno]: editValor }))
     setDescricoes(prev => ({ ...prev, [editAluno]: editDesc }))
     setEditAluno(null)

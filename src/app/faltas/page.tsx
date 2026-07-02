@@ -51,10 +51,9 @@ export default function Faltas() {
   }
 
   async function togglePresenca(alunoId: string, presente: boolean) {
-    if (presente) {
-      await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
-    } else {
-      await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: false }, { onConflict: "aluno_id,data" })
+    await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
+    if (!presente) {
+      await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: false })
     }
     setFaltas(prev => ({ ...prev, [alunoId]: presente }))
     setTodasPresentes(Object.values({ ...faltas, [alunoId]: presente }).every(v => v !== false))
