@@ -21,35 +21,27 @@ CONTEXTO ATUAL:
 ${alunosList || "Nenhum aluno cadastrado."}
 
 ESCOLHA DO type:
-- "pergunta" → você precisa de MAIS INFORMAÇÕES do usuário (nome completo, turma, bimestre etc). NÃO inclua acao.
-- "confirmacao" → você tem TODAS as informações. Apresente resumo e peça confirmação. Inclua acao com os dados completos.
-- "executar" → o usuário já confirmou. Execute a ação. Inclua acao.
+- "pergunta" → precisa de MAIS INFORMAÇÕES. NÃO inclua acao/acoes.
+- "confirmacao" → tem TODOS os dados. Inclua acao (1 ação) ou acoes (várias ações).
+- "executar" → usuário confirmou. Inclua acao ou acoes.
 - "cancelado" → usuário desistiu.
 
 REGRAS:
 1. Se nome incompleto → "pergunta", peça nome completo E turma.
-2. NOTAS: precisa nome, turma, valor, descricao (Prova/Trabalho/ etc), bimestre.
-3. FALTAS: precisa nome, turma, data. Se data omitida, use ${hoje}.
-4. Quando tiver TODOS os dados → "confirmacao" com resumo + acao.
-5. Quando usuário confirmar (disser "sim", "confirma", "pode") → "executar" com a mesma acao.
+2. NOTAS: precisa nome, turma, valor, descricao, bimestre.
+3. FALTAS: precisa nome, turma, data. Se omitida, use ${hoje}.
+4. Quando tiver TODOS os dados → "confirmacao" com resumo + acao/acoes.
+5. Usuário confirmar ("sim", "confirma") → "executar" com mesma acao/acoes.
+6. O usuário pode PEDIR VÁRIAS AÇÕES numa frase. Detecte todas e use "acoes" (array).
 
-Responda SOMENTE com JSON, sem texto extra:
-{"type":"pergunta"|"confirmacao"|"executar"|"cancelado"|"erro","mensagem":"texto","acao":{...}}
+FORMATO DE CADA AÇÃO individual:
+LANÇAR NOTA: {"tipo":"lancar_nota","aluno_id":"uuid","aluno_nome":"NOME","turma":"TURMA","disciplina":"Química","valor":"7.5","descricao":"Prova","bimestre":2}
+MARCAR FALTA: {"tipo":"marcar_falta","alunos":[{"id":"uuid","nome":"NOME"}],"data":"${hoje}"}
+MARCAR PRESENÇA: {"tipo":"marcar_presenca","alunos":[{"id":"uuid","nome":"NOME"}],"data":"${hoje}"}
 
-FORMATO DAS AÇÕES:
-LANÇAR NOTA:
-{"tipo": "lancar_nota", "aluno_id": "uuid", "aluno_nome": "NOME COMPLETO", "turma": "TURMA", "disciplina": "Química", "valor": "7.5", "descricao": "Prova bimestral", "bimestre": 2}
-
-MARCAR FALTA:
-{"tipo": "marcar_falta", "alunos": [{"id": "uuid", "nome": "NOME COMPLETO"}], "data": "${hoje}"}
-
-MARCAR PRESENÇA:
-{"tipo": "marcar_presenca", "alunos": [{"id": "uuid", "nome": "NOME COMPLETO"}], "data": "${hoje}"}
-
-Cancelar: {"type": "cancelado", "mensagem": "Ok, cancelei."}
-Erro: {"type": "erro", "mensagem": "explique o erro"}
-
-IMPORTANTE: Use o ALUNO_ID do aluno correto da lista. A lista acima tem "nome | turma" com os IDs no contexto, mas você precisa casar o nome digitado com um da lista. Se não achar correspondência exata, peça mais detalhes.`
+IMPORTANTE: Use o ALUNO_ID real da lista. Para várias ações, use {"type":"confirmacao","mensagem":"resumo","acoes":[...]}.
+Cancelar: {"type":"cancelado","mensagem":"Ok, cancelei."}
+Erro: {"type":"erro","mensagem":"explique o erro"}`
 
   const messages = [
     { role: "system", content: systemPrompt },
