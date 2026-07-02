@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { Plus, Trash2 } from "lucide-react"
-import { getAppData, saveAppData, loadGradesFromSupabase, syncGradesToSupabase } from "@/services/horarios"
-import type { Aula, DiaSemana, Grade } from "@/services/horarios"
+import { getEscolasComGrade, salvarGrade, criarEscola, removerEscola } from "@/services/horarios"
+import type { Aula, DiaSemana, Grade, EscolaComGrade } from "@/services/horarios"
 
 const DIAS: { key: DiaSemana; label: string }[] = [
   { key: "segunda", label: "Segunda" },
@@ -23,98 +23,78 @@ const HORARIOS_BASE = [
   { inicio: "11:50", fim: "12:35" },
 ]
 
-function gradeVazia(): Grade {
-  const g = {} as Grade
-  for (const d of DIAS) g[d.key] = [null, null, null, null, null, null, null]
-  return g
-}
-
-const ESCOLA_IEFA = {
-  id: "iefa", nome: "IEFA",
-  grade: {
-    segunda: [null, null, null, null, null, null, null] as (Aula | null)[],
-    terca: [null, null, null, null, null, null, null] as (Aula | null)[],
-    quarta: [null, null, null, null, null, null, null] as (Aula | null)[],
-    quinta: [
-      { inicio: "07:00", fim: "07:45", materia: "Química", turma: "3ª EM" },
-      { inicio: "07:45", fim: "08:30", materia: "Química", turma: "1ª EM" },
-      { inicio: "08:30", fim: "09:15", materia: "Química", turma: "9º ANO" },
-      { inicio: "09:15", fim: "10:00", materia: "Química", turma: "9º ANO" },
-      { inicio: "10:20", fim: "11:05", materia: "Química", turma: "3ª EM" },
-      { inicio: "11:05", fim: "11:50", materia: "Química", turma: "2ª EM" },
-      { inicio: "11:50", fim: "12:35", materia: "Química", turma: "2ª EM" },
-    ],
-    sexta: [
-      { inicio: "07:00", fim: "07:45", materia: "Química", turma: "1ª EM" },
-      { inicio: "07:45", fim: "08:30", materia: "Química", turma: "2ª EM" },
-      { inicio: "08:30", fim: "09:15", materia: "Química", turma: "2ª EM" },
-      { inicio: "09:15", fim: "10:00", materia: "Química", turma: "1ª EM" },
-      { inicio: "10:20", fim: "11:05", materia: "Química", turma: "3ª EM" },
-      { inicio: "11:05", fim: "11:50", materia: "Química", turma: "3ª EM" },
-      { inicio: "11:50", fim: "12:35", materia: "Química", turma: "1ª EM" },
-    ],
-  } as Grade,
-}
-
-type EscolaLocal = { id: string; nome: string; grade: Grade }
-type AppData = { escolas: EscolaLocal[]; escolaAtiva: string }
-
 export default function Horarios() {
-  const [appData, setAppData] = useState<AppData>({ escolas: [], escolaAtiva: "" })
+  const [escolas, setEscolas] = useState<EscolaComGrade[]>([])
+  const [escolaAtiva, setEscolaAtiva] = useState("")
   const [editando, setEditando] = useState(false)
   const [editCelula, setEditCelula] = useState<{ dia: DiaSemana; idx: number } | null>(null)
   const [editForm, setEditForm] = useState<Aula>({ inicio: "", fim: "", materia: "Química", turma: "" })
   const [novaEscolaNome, setNovaEscolaNome] = useState("")
   const [mostrarNovaEscola, setMostrarNovaEscola] = useState(false)
   const [turmasList, setTurmasList] = useState<string[]>([])
-  const [syncing, setSyncing] = useState(false)
-  const [syncMsg, setSyncMsg] = useState("")
+  const [erro, setErro] = useState("")
+  const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
-    const stored = getAppData()
-    if (stored) {
-      setAppData(stored)
-    } else {
-      const initial: AppData = { escolas: [ESCOLA_IEFA], escolaAtiva: "iefa" }
-      setAppData(initial)
-      saveAppData(initial)
-    }
+    carregarEscolas()
     const t = localStorage.getItem("ivan-turmas")
     if (t) { try { setTurmasList(JSON.parse(t)) } catch {} }
   }, [])
 
-  const persistAppData = useCallback((data: AppData) => {
-    saveAppData(data)
-  }, [])
-
-  const escolaAtual = appData.escolas.find(e => e.id === appData.escolaAtiva)
-
-  function atualizarGrade(novaGrade: Grade) {
-    const data = { ...appData, escolas: appData.escolas.map(e => e.id === appData.escolaAtiva ? { ...e, grade: novaGrade } : e) }
-    setAppData(data)
-    persistAppData(data)
+  async function carregarEscolas() {
+    try {
+      const data = await getEscolasComGrade()
+      setEscolas(data)
+      if (data.length && !escolaAtiva) setEscolaAtiva(data[0].id)
+    } catch (e: any) {
+      setErro("Erro ao carregar escolas")
+    }
   }
 
-  function switchEscola(id: string) {
-    const data = { ...appData, escolaAtiva: id }
-    setAppData(data)
-    persistAppData(data)
+  const escolaAtual = escolas.find(e => e.id === escolaAtiva)
+
+  async function atualizarGrade(novaGrade: Grade) {
+    if (!escolaAtual) return
+    setSalvando(true)
+    setErro("")
+    try {
+      await salvarGrade(escolaAtual.id, novaGrade)
+      setEscolas(prev => prev.map(e => e.id === escolaAtual.id ? { ...e, grade: novaGrade } : e))
+    } catch {
+      setErro("Erro ao salvar grade")
+    }
+    setSalvando(false)
   }
 
-  function adicionarEscola() {
+  async function adicionarEscolaHandler() {
     if (!novaEscolaNome.trim()) return
-    const id = novaEscolaNome.toLowerCase().replace(/\s+/g, "-")
-    if (appData.escolas.some(e => e.id === id)) { alert("Já existe uma escola com esse nome."); return }
-    const nova: EscolaLocal = { id, nome: novaEscolaNome.trim(), grade: gradeVazia() }
-    const data = { escolas: [...appData.escolas, nova], escolaAtiva: id }
-    setAppData(data); persistAppData(data)
-    setNovaEscolaNome(""); setMostrarNovaEscola(false)
+    if (escolas.some(e => e.nome.toLowerCase() === novaEscolaNome.trim().toLowerCase())) {
+      alert("Já existe uma escola com esse nome."); return
+    }
+    setErro("")
+    try {
+      const nova = await criarEscola(novaEscolaNome.trim())
+      setEscolas(prev => [...prev, nova])
+      setEscolaAtiva(nova.id)
+      setNovaEscolaNome(""); setMostrarNovaEscola(false)
+    } catch {
+      setErro("Erro ao criar escola")
+    }
   }
 
-  function removerEscola(id: string) {
-    if (appData.escolas.length <= 1) { alert("Precisa ter pelo menos uma escola."); return }
-    const data = { escolas: appData.escolas.filter(e => e.id !== id), escolaAtiva: appData.escolas.find(e => e.id !== id)!.id }
-    setAppData(data); persistAppData(data)
+  async function removerEscolaHandler() {
+    if (escolas.length <= 1) { alert("Precisa ter pelo menos uma escola."); return }
+    if (!escolaAtual) return
+    if (!confirm(`Remover "${escolaAtual.nome}"?`)) return
+    setErro("")
+    try {
+      await removerEscola(escolaAtual.id)
+      const restantes = escolas.filter(e => e.id !== escolaAtual.id)
+      setEscolas(restantes)
+      setEscolaAtiva(restantes[0].id)
+    } catch {
+      setErro("Erro ao remover escola")
+    }
   }
 
   function abrirEdicao(dia: DiaSemana, idx: number, aula: Aula | null) {
@@ -124,12 +104,13 @@ export default function Horarios() {
 
   function salvarEdicao() {
     if (!editCelula || !escolaAtual) return
-    const grade = { ...escolaAtual.grade }
+    const grade = JSON.parse(JSON.stringify(escolaAtual.grade)) as Grade
     if (editForm.turma.trim()) {
       grade[editCelula.dia][editCelula.idx] = { ...editForm }
       if (!turmasList.includes(editForm.turma)) {
-        setTurmasList([...turmasList, editForm.turma])
-        localStorage.setItem("ivan-turmas", JSON.stringify([...turmasList, editForm.turma]))
+        const nova = [...turmasList, editForm.turma]
+        setTurmasList(nova)
+        localStorage.setItem("ivan-turmas", JSON.stringify(nova))
       }
     } else {
       grade[editCelula.dia][editCelula.idx] = null
@@ -140,31 +121,21 @@ export default function Horarios() {
 
   function removerAula() {
     if (!editCelula || !escolaAtual) return
-    const grade = { ...escolaAtual.grade }
+    const grade = JSON.parse(JSON.stringify(escolaAtual.grade)) as Grade
     grade[editCelula.dia][editCelula.idx] = null
     atualizarGrade(grade)
     setEditCelula(null)
   }
 
-  async function syncToCloud() {
-    setSyncing(true)
-    setSyncMsg("")
-    try {
-      const data = getAppData()
-      if (data) {
-        await syncGradesToSupabase(data)
-        setSyncMsg("✅ Sincronizado com a nuvem!")
-      }
-    } catch {
-      setSyncMsg("Erro ao sincronizar")
-    }
-    setSyncing(false)
-    setTimeout(() => setSyncMsg(""), 3000)
-  }
+  if (!escolas.length && !erro) return (
+    <div className="card p-12 text-center">
+      <p className="text-zinc-500">Carregando...</p>
+    </div>
+  )
 
   if (!escolaAtual) return (
     <div className="card p-12 text-center">
-      <p className="text-zinc-400">Nenhuma escola cadastrada.</p>
+      <p className="text-zinc-400">Nenhuma escola cadastrada. Crie uma abaixo.</p>
     </div>
   )
 
@@ -175,31 +146,29 @@ export default function Horarios() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {syncMsg && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700 text-center">{syncMsg}</div>}
+      {erro && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {erro}
+          <button onClick={() => setErro("")} className="ml-2 font-bold">×</button>
+        </div>
+      )}
 
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">◈ Horários</h1>
           <p className="mt-1.5 text-sm text-zinc-500">Grade semanal de aulas — {escolaAtual.nome}</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={syncToCloud} disabled={syncing} className="btn btn-secondary btn-sm" title="Sincronizar horários com a nuvem">
-            {syncing ? "Sincronizando..." : "☁️ Sync"}
-          </button>
-          <button onClick={() => setEditando(!editando)}
-            className={`btn ${editando ? "btn-primary" : "btn-secondary"}`}>
-            {editando ? "✅ Concluir" : "✏️ Editar"}
-          </button>
-        </div>
+        <button onClick={() => setEditando(!editando)}
+          className={`btn ${editando ? "btn-primary" : "btn-secondary"}`}>
+          {editando ? "✅ Concluir" : "✏️ Editar"}
+        </button>
       </div>
 
-      {/* School Selector */}
       <div className="card p-4 flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-zinc-500">🏫</span>
-          <select value={appData.escolaAtiva} onChange={e => switchEscola(e.target.value)} className="select text-sm min-w-[120px]">
-            {appData.escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+          <select value={escolaAtiva} onChange={e => setEscolaAtiva(e.target.value)} className="select text-sm min-w-[120px]">
+            {escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
           </select>
         </div>
         <div className="flex-1" />
@@ -211,17 +180,17 @@ export default function Horarios() {
           <div className="flex items-center gap-2">
             <input type="text" value={novaEscolaNome} onChange={e => setNovaEscolaNome(e.target.value)}
               placeholder="Nome da escola" className="input text-sm max-w-[180px]"
-              onKeyDown={e => e.key === "Enter" && adicionarEscola()} />
-            <button onClick={adicionarEscola} className="btn btn-primary btn-sm">Adicionar</button>
+              onKeyDown={e => e.key === "Enter" && adicionarEscolaHandler()} />
+            <button onClick={adicionarEscolaHandler} className="btn btn-primary btn-sm">Adicionar</button>
             <button onClick={() => setMostrarNovaEscola(false)} className="btn btn-ghost btn-sm">Cancelar</button>
           </div>
         )}
-        <button onClick={() => removerEscola(appData.escolaAtiva)} className="btn btn-ghost btn-sm text-red-500 hover:bg-red-50" title="Remover escola">
+        <button onClick={removerEscolaHandler} className="btn btn-ghost btn-sm text-red-500 hover:bg-red-50" title="Remover escola">
           <Trash2 size={14} />
         </button>
+        {salvando && <span className="badge badge-blue animate-pulse">salvando...</span>}
       </div>
 
-      {/* Mini Stats */}
       <div className="grid gap-3 sm:grid-cols-4">
         <div className="card p-4 text-center">
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Total Semanal</p>
@@ -241,7 +210,6 @@ export default function Horarios() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
@@ -280,12 +248,10 @@ export default function Horarios() {
         </div>
       </div>
 
-      {/* Intervalo Notice */}
       <div className="card p-4 bg-gradient-to-r from-amber-50/80 to-amber-50/30 border-amber-200/50 text-center">
         <p className="text-sm font-medium text-amber-800">☕ Intervalo: 10:00 — 10:20</p>
       </div>
 
-      {/* Edit Modal */}
       {editCelula && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setEditCelula(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>

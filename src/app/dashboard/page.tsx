@@ -5,6 +5,7 @@ import Link from "next/link"
 import { getEscolas } from "@/services/escolas"
 import { getUltimasAulas, getAulasCount } from "@/services/aulas"
 import { getAlunosCount } from "@/services/alunos"
+import { getProximasAulas } from "@/services/horarios"
 
 const quickLinks = [
   { href: "/criar-aula", icon: "✦", label: "Gerar nova aula", desc: "Crie aulas completas com IA", color: "emerald" },
@@ -43,8 +44,8 @@ export default function Dashboard() {
         }
         setStats(prev => ({ ...prev, alunos: totalAlunos }))
 
-        const { getProximasAulas } = await import("@/services/horarios")
-        setProximas(getProximasAulas())
+        const proximas = await getProximasAulas()
+        setProximas(proximas)
       } catch (err: any) {
         console.error("Erro ao carregar dashboard:", err)
       }
