@@ -31,15 +31,10 @@ function gradeVazia(): Grade {
   return g
 }
 
-type Escola = {
-  id: string
-  nome: string
-  grade: Grade
-}
+type Escola = { id: string; nome: string; grade: Grade }
 
 const ESCOLA_IEFA: Escola = {
-  id: "iefa",
-  nome: "IEFA",
+  id: "iefa", nome: "IEFA",
   grade: {
     segunda: [null, null, null, null, null, null, null],
     terca: [null, null, null, null, null, null, null],
@@ -65,10 +60,7 @@ const ESCOLA_IEFA: Escola = {
   },
 }
 
-type AppData = {
-  escolas: Escola[]
-  escolaAtiva: string
-}
+type AppData = { escolas: Escola[]; escolaAtiva: string }
 
 export default function Horarios() {
   const [appData, setAppData] = useState<AppData>({ escolas: [], escolaAtiva: "" })
@@ -79,16 +71,11 @@ export default function Horarios() {
   const [mostrarNovaEscola, setMostrarNovaEscola] = useState(false)
   const [turmasList, setTurmasList] = useState<string[]>([])
 
-  // Carregar do localStorage
   useEffect(() => {
     const saved = localStorage.getItem("ivan-app-data")
     if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as AppData
-        setAppData(parsed)
-      } catch {}
+      try { setAppData(JSON.parse(saved)) } catch {}
     } else {
-      // Primeiro uso: dados iniciais
       const initial: AppData = { escolas: [ESCOLA_IEFA], escolaAtiva: "iefa" }
       setAppData(initial)
       localStorage.setItem("ivan-app-data", JSON.stringify(initial))
@@ -118,23 +105,17 @@ export default function Horarios() {
   function adicionarEscola() {
     if (!novaEscolaNome.trim()) return
     const id = novaEscolaNome.toLowerCase().replace(/\s+/g, "-")
-    if (appData.escolas.some(e => e.id === id)) {
-      alert("Já existe uma escola com esse nome.")
-      return
-    }
+    if (appData.escolas.some(e => e.id === id)) { alert("Já existe uma escola com esse nome."); return }
     const nova: Escola = { id, nome: novaEscolaNome.trim(), grade: gradeVazia() }
     const data = { escolas: [...appData.escolas, nova], escolaAtiva: id }
-    setAppData(data)
-    persistAppData(data)
-    setNovaEscolaNome("")
-    setMostrarNovaEscola(false)
+    setAppData(data); persistAppData(data)
+    setNovaEscolaNome(""); setMostrarNovaEscola(false)
   }
 
   function removerEscola(id: string) {
     if (appData.escolas.length <= 1) { alert("Precisa ter pelo menos uma escola."); return }
     const data = { escolas: appData.escolas.filter(e => e.id !== id), escolaAtiva: appData.escolas.find(e => e.id !== id)!.id }
-    setAppData(data)
-    persistAppData(data)
+    setAppData(data); persistAppData(data)
   }
 
   function abrirEdicao(dia: DiaSemana, idx: number, aula: Aula | null) {
@@ -166,7 +147,11 @@ export default function Horarios() {
     setEditCelula(null)
   }
 
-  if (!escolaAtual) return <p className="text-zinc-500">Nenhuma escola cadastrada.</p>
+  if (!escolaAtual) return (
+    <div className="card p-12 text-center">
+      <p className="text-zinc-400">Nenhuma escola cadastrada.</p>
+    </div>
+  )
 
   const grade = escolaAtual.grade
   const total = Object.values(grade).flat().filter(Boolean).length
@@ -174,166 +159,141 @@ export default function Horarios() {
   const turmasSet = new Set(Object.values(grade).flat().filter((a): a is Aula => a !== null).map(a => a.turma))
 
   return (
-    <div className="space-y-6">
-      {/* Seletor de Escola */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-zinc-500">🏫 Escola:</span>
-          <select
-            value={appData.escolaAtiva}
-            onChange={(e) => switchEscola(e.target.value)}
-            className="rounded-lg border px-3 py-1.5 text-sm font-semibold text-zinc-800 bg-white"
-          >
-            {appData.escolas.map(e => (
-              <option key={e.id} value={e.id}>{e.nome}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex-1" />
-
-        {!mostrarNovaEscola ? (
-          <button onClick={() => setMostrarNovaEscola(true)} className="flex items-center gap-1 rounded-lg border border-emerald-200 px-3 py-1.5 text-sm text-emerald-700 hover:bg-emerald-50">
-            <Plus size={16} /> Nova Escola
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={novaEscolaNome}
-              onChange={(e) => setNovaEscolaNome(e.target.value)}
-              placeholder="Nome da escola"
-              className="rounded-lg border px-3 py-1.5 text-sm"
-              onKeyDown={(e) => e.key === "Enter" && adicionarEscola()}
-            />
-            <button onClick={adicionarEscola} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">Adicionar</button>
-            <button onClick={() => setMostrarNovaEscola(false)} className="text-sm text-zinc-400 hover:text-zinc-600">Cancelar</button>
-          </div>
-        )}
-
-        <button
-          onClick={() => removerEscola(appData.escolaAtiva)}
-          className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-500 hover:bg-red-50"
-          title="Remover escola"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
-
-      {/* Cabeçalho */}
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900">📅 Horários — {escolaAtual.nome}</h1>
-          <p className="mt-1 text-sm text-zinc-500">Grade semanal de aulas</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">◈ Horários</h1>
+          <p className="mt-1.5 text-sm text-zinc-500">Grade semanal de aulas — {escolaAtual.nome}</p>
         </div>
-        <button
-          onClick={() => setEditando(!editando)}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-            editando ? "bg-emerald-600 text-white hover:bg-emerald-700" : "border bg-white text-zinc-700 hover:bg-zinc-100"
-          }`}
-        >
+        <button onClick={() => setEditando(!editando)}
+          className={`btn ${editando ? "btn-primary" : "btn-secondary"}`}>
           {editando ? "✅ Concluir" : "✏️ Editar"}
         </button>
       </div>
 
-      {/* Cards */}
+      {/* School Selector */}
+      <div className="card p-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-zinc-500">🏫</span>
+          <select value={appData.escolaAtiva} onChange={e => switchEscola(e.target.value)} className="select text-sm min-w-[120px]">
+            {appData.escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+          </select>
+        </div>
+        <div className="flex-1" />
+        {!mostrarNovaEscola ? (
+          <button onClick={() => setMostrarNovaEscola(true)} className="btn btn-secondary btn-sm">
+            <Plus size={16} /> Nova Escola
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input type="text" value={novaEscolaNome} onChange={e => setNovaEscolaNome(e.target.value)}
+              placeholder="Nome da escola" className="input text-sm max-w-[180px]"
+              onKeyDown={e => e.key === "Enter" && adicionarEscola()} />
+            <button onClick={adicionarEscola} className="btn btn-primary btn-sm">Adicionar</button>
+            <button onClick={() => setMostrarNovaEscola(false)} className="btn btn-ghost btn-sm">Cancelar</button>
+          </div>
+        )}
+        <button onClick={() => removerEscola(appData.escolaAtiva)} className="btn btn-ghost btn-sm text-red-500 hover:bg-red-50" title="Remover escola">
+          <Trash2 size={14} />
+        </button>
+      </div>
+
+      {/* Mini Stats */}
       <div className="grid gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Total Semanal</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600">{total} aulas</p>
+        <div className="card p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Total Semanal</p>
+          <p className="mt-1 text-2xl font-black text-emerald-600">{total} aulas</p>
         </div>
-        <div className="rounded-xl border bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Dias com Aula</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600">{diasComAula} dias</p>
+        <div className="card p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Dias com Aula</p>
+          <p className="mt-1 text-2xl font-black text-emerald-600">{diasComAula} dias</p>
         </div>
-        <div className="rounded-xl border bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Turmas</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600">{turmasSet.size} turmas</p>
+        <div className="card p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Turmas</p>
+          <p className="mt-1 text-2xl font-black text-emerald-600">{turmasSet.size} turmas</p>
         </div>
-        <div className="rounded-xl border bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">Carga Horária</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600">{total}h/sem</p>
+        <div className="card p-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Carga Horária</p>
+          <p className="mt-1 text-2xl font-black text-emerald-600">{total}h/sem</p>
         </div>
       </div>
 
-      {/* Tabela */}
-      <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead>
-            <tr className="border-b bg-zinc-50">
-              <th className="px-4 py-3 text-left font-semibold text-zinc-500 w-28">Horário</th>
-              {DIAS.map(d => <th key={d.key} className="px-3 py-3 text-center font-semibold text-zinc-500">{d.label}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {HORARIOS_BASE.map((hr, idx) => (
-              <tr key={idx} className="border-b last:border-b-0 hover:bg-zinc-50/50">
-                <td className="px-4 py-3 font-mono text-xs text-zinc-400 whitespace-nowrap">{hr.inicio} — {hr.fim}</td>
-                {DIAS.map(d => {
-                  const aula = grade[d.key][idx]
-                  return (
-                    <td key={d.key} className={`px-2 py-2 text-center ${editando ? "cursor-pointer" : ""}`}
-                      onClick={() => editando && abrirEdicao(d.key, idx, aula)}>
-                      {aula ? (
-                        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-2 py-2 transition-colors hover:border-emerald-400">
-                          <p className="text-xs font-bold text-emerald-800">{aula.materia}</p>
-                          <p className="text-[11px] font-medium text-emerald-600">{aula.turma}</p>
-                        </div>
-                      ) : editando ? (
-                        <div className="rounded-lg border-2 border-dashed border-zinc-200 px-2 py-2 text-xs text-zinc-300 hover:border-emerald-300 hover:text-emerald-400 transition-colors">
-                          + Adicionar
-                        </div>
-                      ) : <span className="text-xs text-zinc-200">—</span>}
-                    </td>
-                  )
-                })}
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200/60 bg-zinc-50/50">
+                <th className="px-4 py-3.5 text-left font-semibold text-zinc-500 w-28">Horário</th>
+                {DIAS.map(d => <th key={d.key} className="px-3 py-3.5 text-center font-semibold text-zinc-500">{d.label}</th>)}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {HORARIOS_BASE.map((hr, idx) => (
+                <tr key={idx} className="border-b border-zinc-100 last:border-b-0 row-hover">
+                  <td className="px-4 py-3 font-mono text-xs text-zinc-400 whitespace-nowrap">{hr.inicio} — {hr.fim}</td>
+                  {DIAS.map(d => {
+                    const aula = grade[d.key][idx]
+                    return (
+                      <td key={d.key} className={`px-2 py-2 text-center ${editando ? "cursor-pointer" : ""}`}
+                        onClick={() => editando && abrirEdicao(d.key, idx, aula)}>
+                        {aula ? (
+                          <div className="mx-auto max-w-[140px] rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100/60 border border-emerald-200/60 px-2.5 py-2.5 transition-all hover:border-emerald-400 hover:shadow-sm">
+                            <p className="text-xs font-bold text-emerald-800">{aula.materia}</p>
+                            <p className="text-[11px] font-semibold text-emerald-600">{aula.turma}</p>
+                          </div>
+                        ) : editando ? (
+                          <div className="mx-auto max-w-[140px] rounded-xl border-2 border-dashed border-zinc-200 px-2.5 py-2.5 text-xs text-zinc-300 hover:border-emerald-300 hover:text-emerald-400 transition-all">
+                            + Adicionar
+                          </div>
+                        ) : <span className="text-xs text-zinc-200">—</span>}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="rounded-xl border bg-amber-50 border-amber-200 p-4 text-center">
+      {/* Intervalo Notice */}
+      <div className="card p-4 bg-gradient-to-r from-amber-50/80 to-amber-50/30 border-amber-200/50 text-center">
         <p className="text-sm font-medium text-amber-800">☕ Intervalo: 10:00 — 10:20</p>
       </div>
 
-      {/* Modal Editar */}
+      {/* Edit Modal */}
       {editCelula && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setEditCelula(null)}>
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setEditCelula(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
             <h3 className="mb-4 text-lg font-bold text-zinc-800">{editForm.turma ? "Editar Aula" : "Nova Aula"}</h3>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-500">Matéria</label>
-                <input type="text" value={editForm.materia} onChange={e => setEditForm({ ...editForm, materia: e.target.value })}
-                  className="w-full rounded-lg border px-3 py-2 text-sm" placeholder="Ex: Química" />
+                <label className="mb-1 block text-xs font-semibold text-zinc-500">Matéria</label>
+                <input type="text" value={editForm.materia} onChange={e => setEditForm({ ...editForm, materia: e.target.value })} className="input" placeholder="Ex: Química" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-500">Turma</label>
-                <input type="text" value={editForm.turma} onChange={e => setEditForm({ ...editForm, turma: e.target.value })}
-                  className="w-full rounded-lg border px-3 py-2 text-sm" placeholder="Ex: 1ª EM" list="turmas-suggest" />
-                <datalist id="turmas-suggest">
-                  {turmasList.map(t => <option key={t} value={t} />)}
-                </datalist>
+                <label className="mb-1 block text-xs font-semibold text-zinc-500">Turma</label>
+                <input type="text" value={editForm.turma} onChange={e => setEditForm({ ...editForm, turma: e.target.value })} className="input" placeholder="Ex: 1ª EM" list="turmas-suggest" />
+                <datalist id="turmas-suggest">{turmasList.map(t => <option key={t} value={t} />)}</datalist>
               </div>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="mb-1 block text-xs font-medium text-zinc-500">Início</label>
-                  <input type="time" value={editForm.inicio} onChange={e => setEditForm({ ...editForm, inicio: e.target.value })}
-                    className="w-full rounded-lg border px-3 py-2 text-sm" />
+                  <label className="mb-1 block text-xs font-semibold text-zinc-500">Início</label>
+                  <input type="time" value={editForm.inicio} onChange={e => setEditForm({ ...editForm, inicio: e.target.value })} className="input" />
                 </div>
                 <div className="flex-1">
-                  <label className="mb-1 block text-xs font-medium text-zinc-500">Fim</label>
-                  <input type="time" value={editForm.fim} onChange={e => setEditForm({ ...editForm, fim: e.target.value })}
-                    className="w-full rounded-lg border px-3 py-2 text-sm" />
+                  <label className="mb-1 block text-xs font-semibold text-zinc-500">Fim</label>
+                  <input type="time" value={editForm.fim} onChange={e => setEditForm({ ...editForm, fim: e.target.value })} className="input" />
                 </div>
               </div>
             </div>
             <div className="mt-5 flex gap-2">
-              <button onClick={removerAula} className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Remover</button>
+              <button onClick={removerAula} className="btn btn-danger btn-sm">Remover</button>
               <div className="flex-1" />
-              <button onClick={() => setEditCelula(null)} className="rounded-lg border px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50">Cancelar</button>
-              <button onClick={salvarEdicao} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">Salvar</button>
+              <button onClick={() => setEditCelula(null)} className="btn btn-ghost btn-sm">Cancelar</button>
+              <button onClick={salvarEdicao} className="btn btn-primary btn-sm">Salvar</button>
             </div>
           </div>
         </div>
