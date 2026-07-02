@@ -17,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
             <div className="flex items-center gap-4 text-sm text-zinc-600">
               <a href="/" className="hover:text-emerald-700">Início</a>
+              <a href="/horarios" className="hover:text-emerald-700">Horários</a>
               <a href="/criar-aula" className="hover:text-emerald-700">Criar Aula</a>
             </div>
           </div>

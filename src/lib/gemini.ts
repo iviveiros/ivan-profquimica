@@ -10,7 +10,7 @@ export function getGemini() {
   return genAI
 }
 
-export function getGeminiModel(model = "gemini-1.5-flash") {
+export function getGeminiModel(model = "gemini-2.5-flash") {
   const ai = getGemini()
   if (!ai) return null
   return ai.getGenerativeModel({ model })

@@ -126,11 +126,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Campos obrigatórios: sistema, turma, topico' }, { status: 400 })
     }
 
-    // Tenta Gemini primeiro, depois Groq
-    let content = await gerarComGemini(sistema, turma, topico)
+    // Tenta Groq primeiro (ilimitado), depois Gemini
+    let content = await gerarComGroq(sistema, turma, topico)
 
     if (!content) {
-      content = await gerarComGroq(sistema, turma, topico)
+      content = await gerarComGemini(sistema, turma, topico)
     }
 
     if (!content) {
