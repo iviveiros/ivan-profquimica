@@ -43,6 +43,18 @@ export default function Pati() {
   async function enviar(texto: string) {
     if (!texto.trim() || loading) return
     setInput("")
+
+    // Se tem ação pendente e usuário confirmou, executa direto sem chamar API
+    const t = texto.trim().toLowerCase()
+    if (pendentes.length > 0) {
+      if (/^(sim|pode|confirma|ok|claro|pode sim|isso|pode lançar|execute)$/i.test(t)) {
+        return confirmarAcao()
+      }
+      if (/^(não|nao|cancela|pare|nenhum|nada)$/i.test(t)) {
+        return cancelarAcao()
+      }
+    }
+
     setMessages(prev => [...prev, { role: "user", content: texto }])
     setLoading(true)
     setPendentes([])
