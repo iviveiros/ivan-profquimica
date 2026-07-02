@@ -442,6 +442,72 @@ body {
   transform: translateX(-50%) scale(1);
 }
 
+/* ===== PAGE TRANSITION ===== */
+.page-enter {
+  animation: fadeInUp 0.35s ease-out;
+}
+
+/* ===== COUNTER ANIMATION ===== */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-count {
+  animation: countUp 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+/* ===== STAGGERED LIST ===== */
+.stagger-item {
+  opacity: 0;
+  animation: fadeInUp 0.35s ease-out forwards;
+}
+.stagger-item:nth-child(1) { animation-delay: 0.02s; }
+.stagger-item:nth-child(2) { animation-delay: 0.06s; }
+.stagger-item:nth-child(3) { animation-delay: 0.10s; }
+.stagger-item:nth-child(4) { animation-delay: 0.14s; }
+.stagger-item:nth-child(5) { animation-delay: 0.18s; }
+.stagger-item:nth-child(6) { animation-delay: 0.22s; }
+.stagger-item:nth-child(7) { animation-delay: 0.26s; }
+.stagger-item:nth-child(8) { animation-delay: 0.30s; }
+
+/* ===== GLOW EFFECTS ===== */
+.glow-emerald {
+  box-shadow: 0 0 20px rgba(5, 150, 105, 0.15);
+}
+.glow-emerald:hover {
+  box-shadow: 0 0 30px rgba(5, 150, 105, 0.25);
+}
+
+/* ===== RIPPLE EFFECT ===== */
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* ===== BETTER MODAL OVERLAY ===== */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ===== STATUS DOTS ===== */
+.dot-online {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #059669;
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.4);
+}
+.dot-offline {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
 /* ===== PRINT ===== */
 @media print {
   nav, .no-print { display: none !important; }
