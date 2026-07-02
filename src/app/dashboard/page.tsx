@@ -11,10 +11,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
-      const { count: aulas } = await supabase.from("aulas").select("*", { count: "exact", head: true })
-      const { count: escolas } = await supabase.from("escolas").select("*", { count: "exact", head: true })
-      const { count: alunos } = await supabase.from("alunos").select("*", { count: "exact", head: true })
-      setStats({ aulas: aulas || 0, escolas: escolas || 0, alunos: alunos || 0 })
+      const { count: aulas } = await supabase.from("aulas").select("id", { count: "exact", head: true })
+      const { data: escData } = await supabase.from("escolas").select("id")
+      const { data: aluData } = await supabase.from("alunos").select("id")
+      setStats({ aulas: aulas || 0, escolas: escData?.length || 0, alunos: aluData?.length || 0 })
 
       const { data: recentes } = await supabase.from("aulas").select("topico, created_at").order("created_at", { ascending: false }).limit(5)
       if (recentes) setUltimasAulas(recentes)
