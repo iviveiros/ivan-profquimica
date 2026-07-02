@@ -104,10 +104,45 @@ export default function Pati() {
     setPendentes([])
   }
 
+  // Normaliza formato de ação vindo da IA para o formato padrão
+  function normalizarAcao(acao: any): any {
+    const a = { ...acao }
+    // Se a IA retornou só o nome do aluno sem ID, tenta casar
+    if (!a.aluno_id && a.aluno_nome) {
+      const match = alunos.find(al => al.nome.toLowerCase().includes(a.aluno_nome.toLowerCase()))
+      if (match) a.aluno_id = match.id
+    }
+    if (!a.aluno_id && a.aluno) {
+      a.aluno_nome = a.aluno
+      const match = alunos.find(al => al.nome.toLowerCase().includes(a.aluno.toLowerCase()))
+      if (match) a.aluno_id = match.id
+      delete a.aluno
+    }
+    // Se a IA usou "nota" em vez de "valor"
+    if (a.nota !== undefined && a.valor === undefined) {
+      a.valor = String(a.nota)
+      delete a.nota
+    }
+    if (a.valor !== undefined && typeof a.valor === "number") {
+      a.valor = String(a.valor)
+    }
+    // Se não tem tipo mas tem nota/valor, é lancar_nota
+    if (!a.tipo && (a.valor || a.nota)) a.tipo = "lancar_nota"
+    // Se tem alunos array e não tem tipo, é marcar_falta
+    if (!a.tipo && a.alunos?.length) a.tipo = "marcar_falta"
+    return a
+  }
+
   async function executarAcoes(acoes: any[]) {
-    for (const acao of acoes) {
+    for (let acao of acoes) {
+      acao = normalizarAcao(acao)
+      if (!acao.tipo) continue
       try {
         if (acao.tipo === "lancar_nota") {
+          if (!acao.aluno_id) {
+            setMessages(prev => [...prev, { role: "assistant", content: `⚠️ Aluno não encontrado para nota: ${acao.aluno_nome || "desconhecido"}` }])
+            continue
+          }
           await supabase.from("notas").delete().eq("aluno_id", acao.aluno_id).eq("disciplina", acao.disciplina || "Química").eq("bimestre", acao.bimestre || 1)
           await supabase.from("notas").insert({
             aluno_id: acao.aluno_id,
@@ -118,15 +153,19 @@ export default function Pati() {
           })
         } else if (acao.tipo === "marcar_falta" && acao.alunos) {
           for (const aluno of acao.alunos) {
+            const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
+            if (!alunoId) continue
             const data = acao.data || new Date().toISOString().split("T")[0]
-            await supabase.from("faltas").delete().eq("aluno_id", aluno.id).eq("data", data)
-            await supabase.from("faltas").insert({ aluno_id: aluno.id, data, presente: false })
+            await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
+            await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: false })
           }
         } else if (acao.tipo === "marcar_presenca" && acao.alunos) {
           for (const aluno of acao.alunos) {
+            const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
+            if (!alunoId) continue
             const data = acao.data || new Date().toISOString().split("T")[0]
-            await supabase.from("faltas").delete().eq("aluno_id", aluno.id).eq("data", data)
-            await supabase.from("faltas").insert({ aluno_id: aluno.id, data, presente: true })
+            await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
+            await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: true })
           }
         }
       } catch (err: any) {

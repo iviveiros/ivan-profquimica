@@ -21,36 +21,25 @@ export async function POST(req: NextRequest) {
   const alunosList = (alunos || []).map((a: any) => `- ${a.nome} (id:${a.id}) | ${a.turma_nome}`).join("\n")
   const hoje = new Date().toISOString().split("T")[0]
 
-  const systemPrompt = `Você é a Pati, assistente do Prof. Ivan no sistema ProfQuímica.
+  const systemPrompt = `Você é a Pati, assistente do Prof. Ivan.
 
-CONTEXTO ATUAL:
-- Escola ativa: ${escola?.nome || "N/A"}
-- Data de hoje: ${hoje}
-- Alunos cadastrados:
-${alunosList || "Nenhum aluno cadastrado."}
-
-ESCOLHA DO type:
-- "pergunta" → precisa de MAIS INFORMAÇÕES. NÃO inclua acao/acoes.
-- "confirmacao" → tem TODOS os dados. Inclua acao (1 ação) ou acoes (várias ações).
-- "executar" → usuário confirmou. Inclua acao ou acoes.
-- "cancelado" → usuário desistiu.
+CONTEXTO:
+- Escola: ${escola?.nome || "N/A"} | Hoje: ${hoje}
+- Alunos:\n${alunosList || "Nenhum"}
 
 REGRAS:
-1. Se nome incompleto → "pergunta", peça nome completo E turma.
-2. NOTAS: precisa nome, turma, valor, descricao, bimestre.
-3. FALTAS: precisa nome, turma, data. Se omitida, use ${hoje}.
-4. Quando tiver TODOS os dados → "confirmacao" com resumo + acao/acoes.
-5. Usuário confirmar ("sim", "confirma") → "executar" com mesma acao/acoes.
-6. O usuário pode PEDIR VÁRIAS AÇÕES numa frase. Detecte todas e use "acoes" (array).
+- Se nome incompleto → peça nome completo E turma
+- NOTAS: precisa nome, turma, valor, descricao (ex: Prova, Trabalho), bimestre
+- FALTAS: precisa nome, turma, data (padrão ${hoje})
+- Detecte TODAS as ações pedidas pelo usuário
+- Se faltar info → type="pergunta" SEM acoes
+- Se tem tudo → type="confirmacao" COM acoes e peça confirmação
+- Usuário confirmar → type="executar" com mesmas acoes
 
-FORMATO DE CADA AÇÃO individual:
-LANÇAR NOTA: {"tipo":"lancar_nota","aluno_id":"uuid","aluno_nome":"NOME","turma":"TURMA","disciplina":"Química","valor":"7.5","descricao":"Prova","bimestre":2}
-MARCAR FALTA: {"tipo":"marcar_falta","alunos":[{"id":"uuid","nome":"NOME"}],"data":"${hoje}"}
-MARCAR PRESENÇA: {"tipo":"marcar_presenca","alunos":[{"id":"uuid","nome":"NOME"}],"data":"${hoje}"}
+RESPONDA APENAS ESTE JSON (sem markdown, sem texto extra):
+{"type":"pergunta"|"confirmacao"|"executar","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"}]}
 
-IMPORTANTE: Use o ALUNO_ID real da lista. Para várias ações, use {"type":"confirmacao","mensagem":"resumo","acoes":[...]}.
-Cancelar: {"type":"cancelado","mensagem":"Ok, cancelei."}
-Erro: {"type":"erro","mensagem":"explique o erro"}`
+IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
 
   const messages = [
     { role: "system", content: systemPrompt },
