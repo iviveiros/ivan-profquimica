@@ -65,7 +65,7 @@ Erro: {"type":"erro","mensagem":"explique o erro"}`
         "Authorization": `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: MODEL, messages, temperature: 0.1, max_tokens: 800 }),
+      body: JSON.stringify({ model: MODEL, messages, temperature: 0.1, max_tokens: 1500 }),
     })
 
     if (!res.ok) {
@@ -83,7 +83,7 @@ Erro: {"type":"erro","mensagem":"explique o erro"}`
       })
     }
 
-    return NextResponse.json({ type: "pergunta", mensagem: "Não entendi. Pode reformular?" })
+    return NextResponse.json({ type: "pergunta", mensagem: "Não consegui processar. Pode reformular de outro jeito?" })
   } catch (err: any) {
     return NextResponse.json({ type: "erro", mensagem: `Erro: ${err.message}` })
   }
