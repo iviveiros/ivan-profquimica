@@ -12,6 +12,7 @@ export async function getAlunos(escolaId: string): Promise<AlunoBasico[]> {
 }
 
 export async function getAlunosDaTurma(escolaId: string, turma: string): Promise<AlunoBasico[]> {
+  if (!turma) return getAlunos(escolaId)
   return safeQuery<AlunoBasico>(() =>
     supabase.from("alunos").select("*").eq("escola_id", escolaId).eq("turma_nome", turma).order("nome")
   )
