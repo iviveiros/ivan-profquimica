@@ -12,14 +12,17 @@ type Message = {
 
 export default function Pati() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "🤖 Oi! Sou a Pati, sua assistente. Posso lançar notas e registrar faltas. Pode pedir várias coisas de uma vez!" },
+    { role: "assistant", content: "🤖 Oi! Sou a Pati, sua assistente. Posso lançar notas e registrar faltas. Também leio PDFs — é só anexar uma lista de notas escaneada!" },
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [alunos, setAlunos] = useState<any[]>([])
   const [escola, setEscola] = useState<any>(null)
   const [pendentes, setPendentes] = useState<any[]>([])
+  const [processandoPdf, setProcessandoPdf] = useState(false)
+  const [pdfNome, setPdfNome] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     async function init() {
@@ -39,7 +42,6 @@ export default function Pati() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Normalize: extrai array de ações de um objeto resposta
   function extrairAcoes(data: any): any[] {
     if (data.acoes && Array.isArray(data.acoes)) return data.acoes
     if (data.acao) return [data.acao]
@@ -50,8 +52,6 @@ export default function Pati() {
     if (!texto.trim() || loading) return
     setInput("")
 
-    // Detecta confirmação/cancelamento de ações pendentes
-    const primeiroInput = !messages.some(m => m.role === "assistant" && m.acoes)
     if (pendentes.length > 0) {
       const t = texto.trim().toLowerCase()
       const palavrasConfirmacao = ["sim", "pode", "confirma", "ok", "claro", "isso", "manda", "faz", "executa"]
@@ -67,7 +67,6 @@ export default function Pati() {
 
     try {
       const historico = [...messages.map(m => ({ role: m.role, content: m.content }))]
-      // Inclui ações pendentes como contexto extra pra API entender "sim"
       const contextoAcoes = pendentes.length > 0 ? pendentes : null
       const res = await fetch("/api/pati", {
         method: "POST",
@@ -110,21 +109,18 @@ export default function Pati() {
     setPendentes([])
   }
 
-  // Normaliza formato de ação vindo da IA para o formato padrão
   function normalizarAcao(acao: any): any {
     const a = { ...acao }
-    // Se a IA retornou só o nome do aluno sem ID, tenta casar
     if (!a.aluno_id && a.aluno_nome) {
-      const match = alunos.find(al => al.nome.toLowerCase().includes(a.aluno_nome.toLowerCase()))
+      const match = alunos.find((al: any) => al.nome.toLowerCase().includes(a.aluno_nome.toLowerCase()))
       if (match) a.aluno_id = match.id
     }
     if (!a.aluno_id && a.aluno) {
       a.aluno_nome = a.aluno
-      const match = alunos.find(al => al.nome.toLowerCase().includes(a.aluno.toLowerCase()))
+      const match = alunos.find((al: any) => al.nome.toLowerCase().includes(a.aluno.toLowerCase()))
       if (match) a.aluno_id = match.id
       delete a.aluno
     }
-    // Se a IA usou "nota" em vez de "valor"
     if (a.nota !== undefined && a.valor === undefined) {
       a.valor = String(a.nota)
       delete a.nota
@@ -132,9 +128,7 @@ export default function Pati() {
     if (a.valor !== undefined && typeof a.valor === "number") {
       a.valor = String(a.valor)
     }
-    // Se não tem tipo mas tem nota/valor, é lancar_nota
     if (!a.tipo && (a.valor || a.nota)) a.tipo = "lancar_nota"
-    // Se tem alunos array e não tem tipo, é marcar_falta
     if (!a.tipo && a.alunos?.length) a.tipo = "marcar_falta"
     return a
   }
@@ -180,6 +174,79 @@ export default function Pati() {
     }
   }
 
+  async function processarPdf(file: File) {
+    if (processandoPdf) return
+    setProcessandoPdf(true)
+    setPdfNome(file.name)
+    setMessages(prev => [...prev, { role: "user", content: `📎 ${file.name}` }])
+    setMessages(prev => [...prev, { role: "assistant", content: `📖 Lendo PDF...` }])
+
+    try {
+      const pdfjsLib = await import("pdfjs-dist")
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
+
+      const arrayBuffer = await file.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+      let texto = ""
+      let textoPorPagina: string[] = []
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const content = await page.getTextContent()
+        const pageText = content.items.map((item: any) => item.str).join(" ")
+        texto += pageText + "\n"
+        textoPorPagina.push(pageText)
+      }
+
+      const textoSemImagens = texto.trim()
+
+      if (textoSemImagens.length > 20) {
+        // PDF com texto extraível
+        const mensagem = `Extraí esta lista de um PDF. Pode lançar as notas para os alunos correspondentes?\n\n--- CONTEÚDO DO PDF ---\n${textoSemImagens}\n\n--- FIM ---\n\nSe encontrar alunos, turmas e notas, lance tudo. Se faltar info, pergunte o que precisa.`
+        await enviar(mensagem)
+      } else {
+        // PDF escaneado → manda cada página pro Gemini
+        setMessages(prev => {
+          const m = [...prev]
+          m[m.length - 1] = { role: "assistant", content: `🔍 PDF sem texto extraível. Analisando imagem com IA...` }
+          return m
+        })
+
+        const todasNotas: string[] = []
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const viewport = page.getViewport({ scale: 2 })
+          const canvas = document.createElement("canvas")
+          canvas.width = viewport.width
+          canvas.height = viewport.height
+          const ctx = canvas.getContext("2d")!
+          await page.render({ canvasContext: ctx, viewport }).promise
+
+          const blob = await new Promise<Blob>(resolve => canvas.toBlob(b => resolve(b!), "image/png"))
+          const formData = new FormData()
+          formData.append("imagem", blob, `pagina-${i}.png`)
+          formData.append("prompt", `Extraia APENAS os nomes dos alunos, suas respectivas notas/conceitos e a turma desta lista escolar. Responda no formato: "Aluno: NOME | Turma: TURMA | Nota: NOTA | Disciplina: DISCIPLINA | Bimestre: B"`)
+
+          const res = await fetch("/api/analisar-imagem", { method: "POST", body: formData })
+          const data = await res.json()
+          if (data.texto) todasNotas.push(data.texto)
+        }
+
+        if (todasNotas.length) {
+          const mensagem = `Recebi estas notas de um PDF escaneado:\n\n${todasNotas.join("\n---\n")}\n\nPode lançar todas as notas para os alunos correspondentes? Se identificar turma, disciplina e bimestre, use. Se faltar algo, pergunte.`
+          await enviar(mensagem)
+        } else {
+          setMessages(prev => [...prev, { role: "assistant", content: "❌ Não consegui extrair nada. O PDF está legível?" }])
+        }
+      }
+    } catch (err: any) {
+      setMessages(prev => [...prev, { role: "assistant", content: `❌ Erro ao ler PDF: ${err.message}` }])
+    } finally {
+      setProcessandoPdf(false)
+      setPdfNome("")
+    }
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -201,7 +268,7 @@ export default function Pati() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">🤖 Pati</h1>
-          <p className="mt-1.5 text-sm text-zinc-500">Pode pedir várias ações de uma vez!</p>
+          <p className="mt-1.5 text-sm text-zinc-500">Lançar notas, faltas e ler PDFs</p>
         </div>
         <span className="badge badge-emerald animate-pulse">online</span>
       </div>
@@ -258,18 +325,30 @@ export default function Pati() {
         )}
 
         <div className="border-t border-zinc-200/60 p-4">
+          {processandoPdf && (
+            <div className="mb-3 flex items-center gap-2 text-sm text-emerald-600 animate-pulse">
+              <span className="spinner h-4 w-4" />
+              Processando {pdfNome}...
+            </div>
+          )}
           <div className="flex gap-2">
+            <input type="file" accept=".pdf" ref={fileInputRef} className="hidden"
+              onChange={e => { if (e.target.files?.[0]) processarPdf(e.target.files[0]); e.target.value = "" }} />
+            <button onClick={() => fileInputRef.current?.click()} disabled={loading || processandoPdf}
+              className="btn btn-secondary btn-sm shrink-0 px-2" title="Anexar PDF">
+              📎
+            </button>
             <input type="text" value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder='Ex: nota 7 pra Ana Alicia 2º bim prova e falta pra Valentina hoje'
-              className="input flex-1" disabled={loading} />
-            <button onClick={() => enviar(input)} disabled={!input.trim() || loading}
+              placeholder="Ex: nota 7 pra Ana Alicia 2º bim..."
+              className="input flex-1" disabled={loading || processandoPdf} />
+            <button onClick={() => enviar(input)} disabled={!input.trim() || loading || processandoPdf}
               className="btn btn-primary shrink-0">
               {loading ? <span className="spinner" /> : "Enviar"}
             </button>
           </div>
           <p className="mt-2 text-[11px] text-zinc-400 text-center">
-            Pode pedir várias coisas numa frase • Ex: &quot;nota 8 João 1º bim trabalho e falta Maria e Ana hoje&quot;
+            📎 Anexe um PDF de notas • Ou digite o que precisa
           </p>
         </div>
       </div>
