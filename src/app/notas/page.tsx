@@ -6,7 +6,6 @@ import { getEscolas } from "@/services/escolas"
 import { getAlunosDaTurma } from "@/services/alunos"
 import { getNotas, salvarNota } from "@/services/notas"
 import type { AlunoBasico } from "@/services/alunos"
-import { ServiceError } from "@/services/supabase"
 
 type Nota = { id: string; aluno_id: string; disciplina: string; valor: string; descricao: string; bimestre: number }
 

@@ -29,18 +29,18 @@ export default function AlunoPerfil() {
     setErro("")
     try {
       const id = params.id as string
-      const a = await getAluno(id)
+      const [a, f, n] = await Promise.all([
+        getAluno(id),
+        getFaltasDoAluno(id),
+        getNotasDoAluno(id),
+      ])
       if (!a) return
       setAluno(a)
+      setFaltas(f)
+      setNotas(n)
 
       const nome = await getEscolaNome(a.escola_id || "")
       if (nome) setEscolaNome(nome)
-
-      const f = await getFaltasDoAluno(id)
-      setFaltas(f)
-
-      const n = await getNotasDoAluno(id)
-      setNotas(n)
     } catch (e) {
       setErro(e instanceof ServiceError ? e.message : "Erro ao carregar dados do aluno")
     }

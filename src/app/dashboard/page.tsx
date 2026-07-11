@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { getEscolas } from "@/services/escolas"
 import { getUltimasAulas, getAulasCount } from "@/services/aulas"
-import { getAlunosCount } from "@/services/alunos"
 import { getProximasAulas } from "@/services/horarios"
 
 const quickLinks = [
@@ -36,12 +35,8 @@ export default function Dashboard() {
         })
         setUltimasAulas(aulasRecentes)
 
-        const { getAlunosCount } = await import("@/services/alunos")
-        let totalAlunos = 0
-        for (const e of escolas) {
-          const c = await getAlunosCount(e.id)
-          totalAlunos += c
-        }
+        const alunosCounts = await Promise.all(escolas.map(e => import("@/services/alunos").then(m => m.getAlunosCount(e.id))))
+        const totalAlunos = alunosCounts.reduce((a, b) => a + b, 0)
         setStats(prev => ({ ...prev, alunos: totalAlunos }))
 
         const proximas = await getProximasAulas()

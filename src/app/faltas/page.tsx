@@ -6,7 +6,6 @@ import { getEscolas } from "@/services/escolas"
 import { getAlunosDaTurma } from "@/services/alunos"
 import { getFaltas, salvarFalta, marcarTodosPresentes } from "@/services/faltas"
 import type { AlunoBasico } from "@/services/alunos"
-import { ServiceError } from "@/services/supabase"
 
 type FaltasMap = Record<string, boolean>
 

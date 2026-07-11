@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Trash2 } from "lucide-react"
 import { getEscolasComGrade, salvarGrade, criarEscola, removerEscola } from "@/services/horarios"
 import type { Aula, DiaSemana, Grade, EscolaComGrade } from "@/services/horarios"
 
@@ -174,7 +173,7 @@ export default function Horarios() {
         <div className="flex-1" />
         {!mostrarNovaEscola ? (
           <button onClick={() => setMostrarNovaEscola(true)} className="btn btn-secondary btn-sm">
-            <Plus size={16} /> Nova Escola
+            ➕ Nova Escola
           </button>
         ) : (
           <div className="flex items-center gap-2">
@@ -186,7 +185,7 @@ export default function Horarios() {
           </div>
         )}
         <button onClick={removerEscolaHandler} className="btn btn-ghost btn-sm text-red-500 hover:bg-red-50" title="Remover escola">
-          <Trash2 size={14} />
+          🗑️
         </button>
         {salvando && <span className="badge badge-blue animate-pulse">salvando...</span>}
       </div>

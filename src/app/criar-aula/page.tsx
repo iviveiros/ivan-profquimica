@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import type { SistemaEnsino, Turma, ConteudoGerado } from "@/types"
@@ -18,11 +18,11 @@ export default function CriarAula() {
   const [aulaId, setAulaId] = useState<string | null>(null)
   const [aba, setAba] = useState<"resumo" | "exercicios" | "avaliacao">("resumo")
 
-  useState(() => {
+  useEffect(() => {
     supabase.from("sistemas_ensino").select("*").then(({ data }) => {
       if (data) setSistemas(data)
     })
-  })
+  }, [])
 
   async function carregarTurmas(sisId: string) {
     setSistemaId(sisId)
