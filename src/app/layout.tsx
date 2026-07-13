@@ -15,6 +15,7 @@ const navItems = [
   { href: "/faltas", label: "Chamada", icon: "◇" },
   { href: "/notas", label: "Notas", icon: "○" },
   { href: "/pati", label: "Pati", icon: "🤖" },
+  { href: "/demo", label: "Demo", icon: "🎬" },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
