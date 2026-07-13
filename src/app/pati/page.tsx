@@ -201,14 +201,40 @@ export default function Pati() {
           if (!grade) {
             linhas.push("Nenhum horário cadastrado para esta escola.")
           } else {
-            const dias = acao.dia ? [acao.dia] : Object.keys(grade)
-            for (const dia of dias) {
-              const aulas = grade[dia]?.filter((a: any) => a !== null) || []
-              if (!aulas.length) {
-                linhas.push(`${dia}: Sem aulas`)
+            const diasSemana = ["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"]
+            const agora = new Date()
+            const hojeNome = diasSemana[agora.getDay()]
+            const horaAtual = String(agora.getHours()).padStart(2, "0") + ":" + String(agora.getMinutes()).padStart(2, "0")
+
+            const diaBusca = acao.dia === "hoje" || !acao.dia ? hojeNome : acao.dia
+            const aulas = grade[diaBusca]?.filter((a: any) => a !== null) || []
+
+            if (!aulas.length) {
+              linhas.push(`Sem aulas na ${diaBusca}-feira.`)
+            } else {
+              const proxima = aulas.find((a: any) => a.inicio >= horaAtual)
+              const passadas = aulas.filter((a: any) => a.inicio < horaAtual)
+
+              if (proxima && (acao.proxima || passadas.length < aulas.length)) {
+                linhas.push(`📅 ${diaBusca}-feira — ${aulas.length} aulas`)
+                if (proxima) {
+                  linhas.push(`\n▶️ **Próxima aula:** ${proxima.inicio}-${proxima.fim} | ${proxima.materia} | ${proxima.turma}`)
+                }
+                const restantes = aulas.filter((a: any) => a !== proxima && a.inicio >= horaAtual)
+                if (restantes.length) {
+                  linhas.push(`\nAinda hoje:`)
+                  restantes.forEach((a: any) => linhas.push(`   ${a.inicio}-${a.fim} | ${a.materia} | ${a.turma}`))
+                }
+                if (passadas.length) {
+                  linhas.push(`\nJá passaram:`)
+                  passadas.forEach((a: any) => linhas.push(`   ${a.inicio}-${a.fim} | ${a.materia} | ${a.turma}`))
+                }
               } else {
-                linhas.push(`📅 ${dia}:`)
+                linhas.push(`📅 ${diaBusca}-feira (${aulas.length} aulas):`)
                 aulas.forEach((a: any) => linhas.push(`   ${a.inicio}-${a.fim} | ${a.materia} | ${a.turma}`))
+                if (passadas.length === aulas.length) {
+                  linhas.push("\nTodas as aulas de hoje já passaram.")
+                }
               }
             }
           }
