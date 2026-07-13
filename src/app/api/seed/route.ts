@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 const alunos = [
   { nome: 'ANA ALLICIA DE OLIVEIRA DAVID', turma_nome: '1º Ano EM' },
@@ -43,75 +40,108 @@ const alunos = [
   { nome: 'NICOLY SCHIAVON DA SILVA', turma_nome: '3º Ano EM' },
 ]
 
+async function supFetch(path: string, options?: RequestInit) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      ...options?.headers,
+    },
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Supabase ${res.status}: ${text}`)
+  }
+  return res.json()
+}
+
 export async function GET() {
   const results: string[] = []
 
-  // 1. Sistemas de Ensino
-  const { data: sis } = await supabase.from('sistemas_ensino').select('*')
-  if (!sis?.length) {
-    const { error } = await supabase.from('sistemas_ensino').insert([
-      { nome: 'Poliedro' }, { nome: 'Objetivo' }, { nome: 'Mackenzie' }, { nome: 'OCTA+' }, { nome: 'IEFA' },
-    ])
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    results.push('sistemas_ensino criados')
-  } else {
-    results.push(`sistemas_ensino: ${sis.length} existentes`)
-  }
+  try {
+    // 1. Sistemas
+    let sis = await supFetch('sistemas_ensino?select=id')
+    if (!sis.length) {
+      await supFetch('sistemas_ensino', {
+        method: 'POST',
+        body: JSON.stringify([
+          { nome: 'Poliedro' }, { nome: 'Objetivo' }, { nome: 'Mackenzie' }, { nome: 'OCTA+' }, { nome: 'IEFA' },
+        ]),
+        headers: { 'Prefer': 'return=representation' },
+      })
+      sis = await supFetch('sistemas_ensino?select=id')
+      results.push('sistemas criados')
+    } else {
+      results.push(`sistemas: ${sis.length}`)
+    }
 
-  // 2. Turmas
-  const { data: turmas } = await supabase.from('turmas').select('*')
-  if (!turmas?.length) {
-    const { data: s } = await supabase.from('sistemas_ensino').select('id')
-    if (!s?.length) return NextResponse.json({ error: 'no sistemas' }, { status: 500 })
-    const inserts = s.flatMap(si => [
-      { sistema_id: si.id, nome: '9º Ano', ano: '9ano' },
-      { sistema_id: si.id, nome: '1º Ano EM', ano: '1em' },
-      { sistema_id: si.id, nome: '2º Ano EM', ano: '2em' },
-      { sistema_id: si.id, nome: '3º Ano EM', ano: '3em' },
-    ])
-    const { error } = await supabase.from('turmas').insert(inserts)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    results.push('turmas criadas')
-  } else {
-    results.push(`turmas: ${turmas.length} existentes`)
-  }
+    // 2. Turmas
+    let turmas = await supFetch('turmas?select=id,sistema_id')
+    if (!turmas.length) {
+      const inserts = sis.flatMap((s: any) => [
+        { sistema_id: s.id, nome: '9º Ano', ano: '9ano' },
+        { sistema_id: s.id, nome: '1º Ano EM', ano: '1em' },
+        { sistema_id: s.id, nome: '2º Ano EM', ano: '2em' },
+        { sistema_id: s.id, nome: '3º Ano EM', ano: '3em' },
+      ])
+      await supFetch('turmas', {
+        method: 'POST',
+        body: JSON.stringify(inserts),
+        headers: { 'Prefer': 'return=representation' },
+      })
+      results.push('turmas criadas')
+    } else {
+      results.push(`turmas: ${turmas.length}`)
+    }
 
-  // 3. Escola IEFA
-  let escolaId: string | null = null
-  const { data: escolas } = await supabase.from('escolas').select('id').limit(1)
-  if (!escolas?.length) {
-    const { data, error } = await supabase.from('escolas').insert({ nome: 'IEFA', grade: {} }).select('id').single()
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    escolaId = data.id
-    results.push('escola IEFA criada')
-  } else {
-    escolaId = escolas[0].id
-    results.push('escola IEFA já existe')
-  }
+    // 3. Escola IEFA
+    let escolas = await supFetch('escolas?select=id')
+    let escolaId: string
+    if (!escolas.length) {
+      const created = await supFetch('escolas', {
+        method: 'POST',
+        body: JSON.stringify({ nome: 'IEFA', grade: {} }),
+        headers: { 'Prefer': 'return=representation' },
+      })
+      escolaId = created[0]?.id
+      results.push('escola IEFA criada')
+    } else {
+      escolaId = escolas[0].id
+      results.push('escola IEFA já existe')
+    }
 
-  // 4. Turmas professor
-  const { data: tp } = await supabase.from('turmas_professor').select('*')
-  if (!tp?.length) {
-    const { error } = await supabase.from('turmas_professor').insert([
-      { escola_id: escolaId, nome: '1º Ano EM', ano: '1em' },
-      { escola_id: escolaId, nome: '2º Ano EM', ano: '2em' },
-      { escola_id: escolaId, nome: '3º Ano EM', ano: '3em' },
-    ])
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    results.push('turmas_professor criadas')
-  }
+    // 4. Turmas professor
+    const tp = await supFetch(`turmas_professor?escola_id=eq.${escolaId}`)
+    if (!tp.length) {
+      await supFetch('turmas_professor', {
+        method: 'POST',
+        body: JSON.stringify([
+          { escola_id: escolaId, nome: '1º Ano EM', ano: '1em' },
+          { escola_id: escolaId, nome: '2º Ano EM', ano: '2em' },
+          { escola_id: escolaId, nome: '3º Ano EM', ano: '3em' },
+        ]),
+      })
+      results.push('turmas_professor criadas')
+    }
 
-  // 5. Alunos
-  const { count } = await supabase.from('alunos').select('*', { count: 'exact', head: true })
-  if (count === 0) {
-    const { error } = await supabase.from('alunos').insert(
-      alunos.map(a => ({ ...a, escola_id: escolaId }))
-    )
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    results.push(`${alunos.length} alunos inseridos`)
-  } else {
-    results.push(`alunos: ${count} existentes`)
-  }
+    // 5. Alunos
+    const { count } = await supFetch(`alunos?select=count`)
+    if (!count) {
+      await supFetch('alunos', {
+        method: 'POST',
+        body: JSON.stringify(alunos.map(a => ({ ...a, escola_id: escolaId }))),
+      })
+      results.push(`${alunos.length} alunos inseridos`)
+    } else {
+      results.push(`alunos: ${count}`)
+    }
 
-  return NextResponse.json({ ok: true, results })
+    return NextResponse.json({ ok: true, results })
+  } catch (err: any) {
+    console.error('Seed error:', err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
 }
