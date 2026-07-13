@@ -249,12 +249,12 @@ export default function Horarios() {
                       </div>
                       <div className="p-3">
                         <div className="flex items-center gap-2">
-                          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${cores.dot}`} />
-                          <p className={`text-sm font-bold leading-tight ${cores.text}`}>{aula!.materia}</p>
+                          <span className={`h-3 w-3 shrink-0 rounded-full ${cores.dot}`} />
+                          <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{aula!.turma}</p>
                         </div>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-[11px] font-semibold text-zinc-500">{aula!.turma}</span>
-                          <span className="text-[10px] font-mono text-zinc-400">{aula!.inicio}–{aula!.fim}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-semibold text-zinc-400">{aula!.materia}</span>
+                          <span className="text-[10px] font-mono text-zinc-300">• {aula!.inicio}–{aula!.fim}</span>
                         </div>
                       </div>
                       {/* Drag handle in edit mode */}
