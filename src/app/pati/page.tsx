@@ -84,8 +84,7 @@ export default function Pati() {
 
       if ((data.type === "executar" || data.type === "resposta") && acoes.length) {
         const resultado = await executarAcoes(acoes)
-        const textoResultado = resultado ? "\n\n" + resultado : ""
-        setMessages(prev => [...prev, { role: "assistant", content: (data.mensagem || "✅ Feito!") + textoResultado }])
+        setMessages(prev => [...prev, { role: "assistant", content: resultado || data.mensagem || "✅ Feito!" }])
       } else if ((data.type === "confirmacao" || data.type === "pergunta") && acoes.length) {
         setPendentes(acoes)
         setMessages(prev => [...prev, { role: "assistant", content: data.mensagem, acoes }])
