@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { getEscolas } from "@/services/escolas"
+import { getGrade } from "@/services/horarios"
 import { supabase } from "@/lib/supabase"
 
 type Message = {
@@ -12,12 +13,13 @@ type Message = {
 
 export default function Pati() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "🤖 Oi! Sou a Pati, sua assistente. Posso lançar notas e registrar faltas. Também leio PDFs — é só anexar uma lista de notas escaneada!" },
+    { role: "assistant", content: "🤖 Oi! Sou a Pati, sua assistente. Posso lançar notas, registrar faltas, sortear alunos, listar turmas e consultar horários. Também leio PDFs!" },
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [alunos, setAlunos] = useState<any[]>([])
   const [escola, setEscola] = useState<any>(null)
+  const [grade, setGrade] = useState<any>(null)
   const [pendentes, setPendentes] = useState<any[]>([])
   const [processandoPdf, setProcessandoPdf] = useState(false)
   const [pdfNome, setPdfNome] = useState("")
@@ -28,7 +30,11 @@ export default function Pati() {
     async function init() {
       try {
         const escolas = await getEscolas()
-        if (escolas.length) setEscola(escolas[0])
+        if (escolas.length) {
+          setEscola(escolas[0])
+          const g = await getGrade(escolas[0].id)
+          if (g) setGrade(g)
+        }
       } catch {}
       try {
         const { data } = await supabase.from("alunos").select("id, nome, turma_nome").order("nome")
@@ -71,14 +77,15 @@ export default function Pati() {
       const res = await fetch("/api/pati", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mensagem: texto, historico, alunos, escola, acoesPendentes: contextoAcoes }),
+        body: JSON.stringify({ mensagem: texto, historico, alunos, escola, grade, acoesPendentes: contextoAcoes }),
       })
       const data = await res.json()
       const acoes = extrairAcoes(data)
 
-      if (data.type === "executar" && acoes.length) {
-        await executarAcoes(acoes)
-        setMessages(prev => [...prev, { role: "assistant", content: data.mensagem || "✅ Feito!" }])
+      if ((data.type === "executar" || data.type === "resposta") && acoes.length) {
+        const resultado = await executarAcoes(acoes)
+        const textoResultado = resultado ? "\n\n" + resultado : ""
+        setMessages(prev => [...prev, { role: "assistant", content: (data.mensagem || "✅ Feito!") + textoResultado }])
       } else if ((data.type === "confirmacao" || data.type === "pergunta") && acoes.length) {
         setPendentes(acoes)
         setMessages(prev => [...prev, { role: "assistant", content: data.mensagem, acoes }])
@@ -133,14 +140,15 @@ export default function Pati() {
     return a
   }
 
-  async function executarAcoes(acoes: any[]) {
+  async function executarAcoes(acoes: any[]): Promise<string> {
+    const linhas: string[] = []
     for (let acao of acoes) {
       acao = normalizarAcao(acao)
       if (!acao.tipo) continue
       try {
         if (acao.tipo === "lancar_nota") {
           if (!acao.aluno_id) {
-            setMessages(prev => [...prev, { role: "assistant", content: `⚠️ Aluno não encontrado para nota: ${acao.aluno_nome || "desconhecido"}` }])
+            linhas.push(`⚠️ Aluno não encontrado: ${acao.aluno_nome || "desconhecido"}`)
             continue
           }
           await supabase.from("notas").delete().eq("aluno_id", acao.aluno_id).eq("disciplina", acao.disciplina || "Química").eq("bimestre", acao.bimestre || 1)
@@ -151,6 +159,7 @@ export default function Pati() {
             descricao: acao.descricao || "",
             bimestre: acao.bimestre || 1,
           })
+          linhas.push(`📝 ${acao.aluno_nome}: ${acao.valor}`)
         } else if (acao.tipo === "marcar_falta" && acao.alunos) {
           for (const aluno of acao.alunos) {
             const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
@@ -158,6 +167,7 @@ export default function Pati() {
             const data = acao.data || new Date().toISOString().split("T")[0]
             await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
             await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: false })
+            linhas.push(`❌ Falta: ${aluno.nome} (${data})`)
           }
         } else if (acao.tipo === "marcar_presenca" && acao.alunos) {
           for (const aluno of acao.alunos) {
@@ -166,12 +176,49 @@ export default function Pati() {
             const data = acao.data || new Date().toISOString().split("T")[0]
             await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
             await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: true })
+            linhas.push(`✅ Presença: ${aluno.nome} (${data})`)
+          }
+        } else if (acao.tipo === "listar_alunos") {
+          const filtrados = acao.turma
+            ? alunos.filter((a: any) => a.turma_nome.toLowerCase() === acao.turma.toLowerCase())
+            : alunos
+          if (!filtrados.length) {
+            linhas.push(`Nenhum aluno encontrado${acao.turma ? ` na turma ${acao.turma}` : ""}.`)
+          } else {
+            linhas.push(`📋 ${filtrados.length} aluno(s):`)
+            filtrados.forEach((a: any, i: number) => linhas.push(`${i + 1}. ${a.nome} (${a.turma_nome})`))
+          }
+        } else if (acao.tipo === "sortear_aluno") {
+          const filtrados = acao.turma
+            ? alunos.filter((a: any) => a.turma_nome.toLowerCase() === acao.turma.toLowerCase())
+            : alunos
+          if (!filtrados.length) {
+            linhas.push(`Nenhum aluno disponível${acao.turma ? ` na turma ${acao.turma}` : ""}.`)
+          } else {
+            const sorteado = filtrados[Math.floor(Math.random() * filtrados.length)]
+            linhas.push(`🎲 Aluno sorteado: **${sorteado.nome}** (${sorteado.turma_nome})`)
+          }
+        } else if (acao.tipo === "consultar_horarios") {
+          if (!grade) {
+            linhas.push("Nenhum horário cadastrado para esta escola.")
+          } else {
+            const dias = acao.dia ? [acao.dia] : Object.keys(grade)
+            for (const dia of dias) {
+              const aulas = grade[dia]?.filter((a: any) => a !== null) || []
+              if (!aulas.length) {
+                linhas.push(`${dia}: Sem aulas`)
+              } else {
+                linhas.push(`📅 ${dia}:`)
+                aulas.forEach((a: any) => linhas.push(`   ${a.inicio}-${a.fim} | ${a.materia} | ${a.turma}`))
+              }
+            }
           }
         }
       } catch (err: any) {
-        setMessages(prev => [...prev, { role: "assistant", content: `Erro: ${err.message}` }])
+        linhas.push(`Erro: ${err.message}`)
       }
     }
+    return linhas.join("\n")
   }
 
   async function processarPdf(file: File) {
@@ -259,8 +306,11 @@ export default function Pati() {
       if (a.tipo === "lancar_nota") return `📝 Nota ${a.valor} para ${a.aluno_nome} (${a.turma}, ${a.bimestre}º bim)`
       if (a.tipo === "marcar_falta") return `❌ Falta: ${a.alunos?.map((x: any) => x.nome).join(", ")}`
       if (a.tipo === "marcar_presenca") return `✅ Presença: ${a.alunos?.map((x: any) => x.nome).join(", ")}`
+      if (a.tipo === "listar_alunos") return `📋 Listar alunos${a.turma ? ` da turma ${a.turma}` : ""}`
+      if (a.tipo === "sortear_aluno") return `🎲 Sortear aluno${a.turma ? ` da turma ${a.turma}` : ""}`
+      if (a.tipo === "consultar_horarios") return `📅 Consultar horários${a.dia ? ` de ${a.dia}` : ""}`
       return ""
-    }).join("\n")
+    }).filter(Boolean).join("\n")
   }
 
   return (
@@ -268,7 +318,7 @@ export default function Pati() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">🤖 Pati</h1>
-          <p className="mt-1.5 text-sm text-zinc-500">Lançar notas, faltas e ler PDFs</p>
+          <p className="mt-1.5 text-sm text-zinc-500">Lançar notas, faltas, lista, sorteio e horários</p>
         </div>
         <span className="badge badge-emerald animate-pulse">online</span>
       </div>
@@ -290,6 +340,9 @@ export default function Pati() {
                         {a.tipo === "lancar_nota" && <>📝 {a.aluno_nome}: <strong>{a.valor}</strong> ({a.descricao}, {a.bimestre}º bim)</>}
                         {a.tipo === "marcar_falta" && <>❌ Falta: {a.alunos?.map((x: any) => x.nome).join(", ")}</>}
                         {a.tipo === "marcar_presenca" && <>✅ Presença: {a.alunos?.map((x: any) => x.nome).join(", ")}</>}
+                        {a.tipo === "listar_alunos" && <>📋 Listar alunos{a.turma ? ` (${a.turma})` : ""}</>}
+                        {a.tipo === "sortear_aluno" && <>🎲 Sortear aluno{a.turma ? ` (${a.turma})` : ""}</>}
+                        {a.tipo === "consultar_horarios" && <>📅 Horários{a.dia ? ` (${a.dia})` : ""}</>}
                       </div>
                     ))}
                   </div>
@@ -340,7 +393,7 @@ export default function Pati() {
             </button>
             <input type="text" value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ex: nota 7 pra Ana Alicia 2º bim..."
+              placeholder="Ex: lista 1º ano, sorteio, horários..."
               className="input flex-1" disabled={loading || processandoPdf} />
             <button onClick={() => enviar(input)} disabled={!input.trim() || loading || processandoPdf}
               className="btn btn-primary shrink-0">
@@ -348,7 +401,7 @@ export default function Pati() {
             </button>
           </div>
           <p className="mt-2 text-[11px] text-zinc-400 text-center">
-            📎 Anexe um PDF de notas • Ou digite o que precisa
+            📎 Anexe PDF • "lista 1º ano" • "sorteio" • "horários" • "nota 7 pra Ana"
           </p>
         </div>
       </div>

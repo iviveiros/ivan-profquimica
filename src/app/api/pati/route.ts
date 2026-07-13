@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ type: "pergunta", mensagem: "Formato inválido." })
   }
 
-  const { mensagem, historico, alunos, escola, acoesPendentes } = body
+  const { mensagem, historico, alunos, escola, grade, acoesPendentes } = body
   if (!mensagem?.trim()) {
     return NextResponse.json({ type: "pergunta", mensagem: "Diga algo!" })
   }
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   const alunosList = (alunos || []).map((a: any) => `- ${a.nome} (id:${a.id}) | ${a.turma_nome}`).join("\n")
+  const gradeStr = grade ? JSON.stringify(grade, null, 2) : "N/A"
   const hoje = new Date().toISOString().split("T")[0]
 
   const systemPrompt = `Você é a Pati, assistente do Prof. Ivan.
@@ -59,18 +60,23 @@ export async function POST(req: NextRequest) {
 CONTEXTO:
 - Escola: ${escola?.nome || "N/A"} | Hoje: ${hoje}
 - Alunos:\n${alunosList || "Nenhum"}
+- Grade horarios (JSON):\n${gradeStr}
 
 REGRAS:
 - Se nome incompleto → peça nome completo E turma
 - NOTAS: precisa nome, turma, valor, descricao (ex: Prova, Trabalho), bimestre
 - FALTAS: precisa nome, turma, data (padrão ${hoje})
+- LISTAR: type="resposta" com acao listar_alunos + turma (opcional)
+- SORTEAR: type="resposta" com acao sortear_aluno + turma (opcional)
+- HORARIOS: type="resposta" com acao consultar_horarios + dia (opcional: segunda a sexta)
 - Detecte TODAS as ações pedidas pelo usuário
 - Se faltar info → type="pergunta" SEM acoes
 - Se tem tudo → type="confirmacao" COM acoes e peça confirmação
+- Consultas (lista, sorteio, horarios) → type="resposta" direto SEM confirmacao
 - Usuário confirmar → type="executar" com mesmas acoes
 
 RESPONDA APENAS ESTE JSON (sem markdown, sem texto extra):
-{"type":"pergunta"|"confirmacao"|"executar","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"}]}
+{"type":"pergunta"|"confirmacao"|"executar"|"resposta","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"},{"tipo":"listar_alunos","turma":"TURMA"},{"tipo":"sortear_aluno","turma":"TURMA"},{"tipo":"consultar_horarios","dia":"segunda|terca|quarta|quinta|sexta"}]}
 
 IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
 
