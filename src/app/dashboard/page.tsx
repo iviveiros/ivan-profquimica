@@ -77,7 +77,7 @@ export default function Dashboard() {
               <div className="relative z-10">
                 <div className="flex items-center justify-between">
                   <span className="text-2xl">{["✦", "◈", "◆", "◉"][i]}</span>
-                  <span className={`badge badge-${s.color}`}>{s.badge}</span>
+                  {!loading && <span className={`badge badge-${s.color}`}>{s.badge}</span>}
                 </div>
                 {loading ? (
                   <div className="mt-4 space-y-2">
