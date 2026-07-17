@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGeminiModel } from '@/lib/gemini'
+import { getGeminiModel, rebaixarModelo } from '@/lib/gemini'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,28 +11,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nenhuma imagem enviada.' }, { status: 400 })
     }
 
-    const model = getGeminiModel('gemini-1.5-flash')
-    if (!model) {
-      return NextResponse.json({ error: 'Gemini não configurado.' }, { status: 500 })
+    let tentativas = 0
+    while (tentativas < 4) {
+      const model = getGeminiModel()
+      if (!model) {
+        return NextResponse.json({ error: 'Gemini não configurado.' }, { status: 500 })
+      }
+      try {
+        const bytes = await file.arrayBuffer()
+        const base64 = Buffer.from(bytes).toString('base64')
+        const mimeType = file.type
+
+        const result = await model.generateContent([
+          { text: prompt },
+          { inlineData: { mimeType, data: base64 } },
+        ])
+
+        return NextResponse.json({ texto: result.response.text() })
+      } catch {
+        rebaixarModelo()
+        tentativas++
+      }
     }
 
-    const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
-    const mimeType = file.type
-
-    const result = await model.generateContent([
-      { text: prompt },
-      {
-        inlineData: {
-          mimeType,
-          data: base64,
-        },
-      },
-    ])
-
-    const text = result.response.text()
-
-    return NextResponse.json({ texto: text })
+    return NextResponse.json({ error: 'Nenhum modelo Gemini disponível.' }, { status: 500 })
   } catch (error: any) {
     console.error('Erro ao analisar imagem:', error)
     return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })

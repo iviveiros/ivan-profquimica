@@ -10,8 +10,26 @@ export function getGemini() {
   return genAI
 }
 
-export function getGeminiModel(model = "gemini-2.5-flash") {
+let melhorModelo: string | null = null
+const MODEL_PREFERENCE = [
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-pro",
+]
+
+export function getGeminiModel(model?: string) {
   const ai = getGemini()
   if (!ai) return null
-  return ai.getGenerativeModel({ model })
+  const nome = model || melhorModelo || MODEL_PREFERENCE[0]
+  return ai.getGenerativeModel({ model: nome })
+}
+
+export function rebaixarModelo() {
+  const idx = melhorModelo
+    ? MODEL_PREFERENCE.indexOf(melhorModelo)
+    : 0
+  melhorModelo = idx < MODEL_PREFERENCE.length - 1
+    ? MODEL_PREFERENCE[idx + 1]
+    : null
 }

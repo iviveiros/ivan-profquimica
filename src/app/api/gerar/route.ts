@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGeminiModel } from '@/lib/gemini'
+import { getGeminiModel, rebaixarModelo } from '@/lib/gemini'
 
 const PROMPT_TEMPLATE = (sistema: string, turma: string, topico: string) => `
 Você é um professor de Química do sistema ${sistema}.
@@ -79,13 +79,21 @@ async function gerarComGroq(sistema: string, turma: string, topico: string) {
 }
 
 async function gerarComGemini(sistema: string, turma: string, topico: string) {
-  const model = getGeminiModel()
-  if (!model) return null
-
-  const result = await model.generateContent([
-    { text: 'Você é um professor de Química experiente. ' + PROMPT_TEMPLATE(sistema, turma, topico) }
-  ])
-  return result.response.text()
+  let tentativas = 0
+  while (tentativas < 4) {
+    const model = getGeminiModel()
+    if (!model) return null
+    try {
+      const result = await model.generateContent([
+        { text: 'Você é um professor de Química experiente. ' + PROMPT_TEMPLATE(sistema, turma, topico) }
+      ])
+      return result.response.text()
+    } catch {
+      rebaixarModelo()
+      tentativas++
+    }
+  }
+  return null
 }
 
 function parseConteudo(content: string) {
