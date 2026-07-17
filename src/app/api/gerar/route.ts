@@ -46,11 +46,19 @@ e) [opção]
 
 | Questão | Resposta |
 |---------|----------|
-| 1 | [A-E] |
-| 2 | [A-E] |
-| ... | ... |
-| 10 | [A-E] |
-`
+| 1 | |
+| 2 | |
+| 3 | |
+| 4 | |
+| 5 | |
+| 6 | |
+| 7 | |
+| 8 | |
+| 9 | |
+| 10 | |
+
+IMPORTANTE: Preencha o gabarito acima com as respostas corretas (A, B, C, D ou E) nas linhas correspondentes. Não deixe em branco.`
+
 
 async function gerarComGroq(sistema: string, turma: string, topico: string) {
   const apiKey = process.env.GROQ_API_KEY
