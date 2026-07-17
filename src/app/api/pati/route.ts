@@ -98,7 +98,7 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
         "Authorization": `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: MODEL, messages, temperature: 0.1, max_tokens: 1500 }),
+      body: JSON.stringify({ model: MODEL, messages, temperature: 0, max_tokens: 1500 }),
     })
 
     if (!res.ok) {
