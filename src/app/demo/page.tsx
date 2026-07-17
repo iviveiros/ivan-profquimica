@@ -5,62 +5,70 @@ import Link from "next/link"
 
 const features = [
   {
-    icon: "✦",
+    icon: "📝",
     title: "Gerar Aula com IA",
-    desc: "Resumo, 15 exercícios e 10 questões de múltipla escolha gerados automaticamente pelo Groq (LLaMA 3.3 70B).",
-    color: "emerald",
+    desc: "Resumo, 15 exercícios e 10 questões de múltipla escolha gerados automaticamente pelo Groq (LLaMA 3.3 70B). Basta informar sistema, turma e conteúdo.",
     gradient: "from-emerald-500 to-emerald-700",
-    bg: "bg-emerald-50",
   },
   {
-    icon: "◈",
-    title: "Horários por Escola",
-    desc: "Grade semanal completa armazenada no Supabase. Suporte a múltiplas escolas com seus próprios horários.",
-    color: "blue",
+    icon: "🗓️",
+    title: "Horários Kanban",
+    desc: "Grade semanal completa por escola. Kanban com cartões coloridos por turma. Edite, mova, adicione ou remova aulas. Modo Geral funde todas as escolas.",
     gradient: "from-blue-500 to-blue-700",
-    bg: "bg-blue-50",
   },
   {
-    icon: "◆",
+    icon: "🎓",
     title: "Gestão de Alunos",
-    desc: "Importe por PDF, texto ou manualmente. Cada aluno vinculado à sua turma e escola.",
-    color: "violet",
+    desc: "Importe por PDF, texto ou manualmente. Cada aluno vinculado à turma e escola. Perfil individual com notas e frequência.",
     gradient: "from-violet-500 to-violet-700",
-    bg: "bg-violet-50",
   },
   {
-    icon: "◇",
+    icon: "📋",
     title: "Chamada Diária",
-    desc: "Registro de presenças e faltas por turma. Suporte a múltiplas escolas sem política fixa.",
-    color: "amber",
+    desc: "Registro de presenças e faltas por turma e data. Suporte a múltiplas escolas sem política fixa — você define os critérios.",
     gradient: "from-amber-500 to-amber-700",
-    bg: "bg-amber-50",
   },
   {
-    icon: "○",
+    icon: "📊",
     title: "Boletim por Bimestre",
-    desc: "Notas livres por disciplina. Cada escola define seus próprios critérios de avaliação.",
-    color: "rose",
+    desc: "Notas livres por disciplina. Cada escola define seus próprios critérios de avaliação. Histórico completo por aluno.",
     gradient: "from-rose-500 to-rose-700",
-    bg: "bg-rose-50",
   },
   {
     icon: "🤖",
     title: "Pati — Assistente IA",
-    desc: "Assistente que lança notas e faltas via texto. Leitura de PDF com OCR (Gemini 2.5 Flash).",
-    color: "purple",
+    desc: "Assistente que lança notas, marca faltas, lista turmas, sorteia alunos e consulta horários via texto. Agora também gerencia a grade: adiciona, edita e remove aulas. Leitura de PDF com OCR (Gemini 2.5 Flash).",
     gradient: "from-purple-500 to-purple-700",
-    bg: "bg-purple-50",
+  },
+  {
+    icon: "🏫",
+    title: "Múltiplas Escolas",
+    desc: "Cadastre quantas escolas precisar. Cada uma com sua própria grade, turmas, alunos, notas e frequência. Troque entre elas com um clique.",
+    gradient: "from-cyan-500 to-cyan-700",
+  },
+  {
+    icon: "🌐",
+    title: "Visão Geral",
+    desc: "Modo Geral no Kanban funde os horários de todas as escolas numa única tela. Ideal para planejamento semanal completo.",
+    gradient: "from-orange-500 to-orange-700",
+  },
+  {
+    icon: "🎲",
+    title: "Sorteio e Listas",
+    desc: "Pati pode sortear alunos aleatoriamente por turma ou listar todos os alunos. Ótimo para chamadas orais e dinâmicas.",
+    gradient: "from-pink-500 to-pink-700",
   },
 ]
 
 const techStack = [
-  { name: "Next.js 16", desc: "App Router + Server Actions" },
-  { name: "Tailwind CSS 4", desc: "Design system glassmorphism" },
-  { name: "Groq LLaMA 3.3", desc: "Geração de conteúdo (gratuito)" },
-  { name: "Gemini 2.5 Flash", desc: "OCR e fallback de geração" },
-  { name: "Supabase", desc: "Banco de dados PostgreSQL" },
-  { name: "Vercel", desc: "Deploy contínuo" },
+  { name: "Next.js 16", desc: "App Router + React Server Components" },
+  { name: "TypeScript 5", desc: "Tipagem estática em todo o projeto" },
+  { name: "Tailwind CSS 4", desc: "Design system glassmorphism + animações" },
+  { name: "Groq LLaMA 3.3 70B", desc: "Geração de conteúdo (gratuito, ilimitado)" },
+  { name: "Gemini 2.5 Flash", desc: "OCR para PDFs escaneados + fallback" },
+  { name: "Supabase", desc: "PostgreSQL + REST API + RLS aberto" },
+  { name: "Vercel", desc: "Deploy contínuo a partir do GitHub" },
+  { name: "Rate Limiting", desc: "10 req/min por IP na API Pati" },
 ]
 
 export default function DemoPage() {
@@ -83,8 +91,9 @@ export default function DemoPage() {
           <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-5xl">
             Ivan ProfQuímica
           </h1>
-          <p className="mx-auto mt-4 max-w-lg text-lg text-zinc-300">
-            Sistema completo para professores de Química gerarem materiais, gerenciarem turmas e acompanharem alunos — tudo com IA.
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-zinc-300">
+            Sistema completo para professores de Química: gere materiais com IA, gerencie horários em Kanban, 
+            registre chamada e notas, acompanhe alunos — tudo em um lugar. Múltiplas escolas, um só painel.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link href="/dashboard" className="btn bg-white text-zinc-900 hover:bg-zinc-100 shadow-xl px-6 py-3 text-base font-bold">
@@ -93,7 +102,28 @@ export default function DemoPage() {
             <Link href="/criar-aula" className="btn bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 text-base font-bold shadow-xl shadow-emerald-900/30">
               ✦ Criar Primeira Aula
             </Link>
+            <Link href="/pati" className="btn bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 text-base font-bold shadow-xl shadow-purple-900/30">
+              🤖 Conhecer a Pati
+            </Link>
           </div>
+        </div>
+      </section>
+
+      {/* Numbers */}
+      <section>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[
+            { num: "2", label: "Escolas", sub: "IEFA + Objetivo" },
+            { num: "9", label: "Turmas", sub: "9º Ano ao 3º EM" },
+            { num: "34", label: "Alunos", sub: "Importados via PDF" },
+            { num: "9", label: "Funcionalidades", sub: "E crescendo" },
+          ].map((s, i) => (
+            <div key={i} className={`card p-5 text-center transition-all duration-700 ${visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"}`} style={{ transitionDelay: `${i*150}ms` }}>
+              <p className="text-3xl font-black text-emerald-600">{s.num}</p>
+              <p className="text-sm font-bold text-zinc-700">{s.label}</p>
+              <p className="text-[11px] text-zinc-400">{s.sub}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -135,9 +165,9 @@ export default function DemoPage() {
         </h2>
         <div className="mt-10 grid gap-8 sm:grid-cols-3">
           {[
-            { step: "1", title: "Configure", desc: "Crie escolas e turmas. Importe seus alunos via PDF ou texto." },
-            { step: "2", title: "Gere Conteúdo", desc: "Escolha o tópico e a IA cria resumo, exercícios e avaliação completos." },
-            { step: "3", title: "Gerencie", desc: "Registre chamada, lance notas, acompanhe horários — tudo em um lugar." },
+            { step: "1", title: "Cadastre", desc: "Crie escolas e turmas. Importe alunos via PDF, texto ou manualmente. Pati ajuda na configuração." },
+            { step: "2", title: "Popule", desc: "Monte a grade de horários no Kanban ou peça para Pati adicionar aulas. Cada escola com sua própria grade." },
+            { step: "3", title: "Produza", desc: "Gere resumos, exercícios e avaliações com IA. Registre chamada, lance notas e acompanhe tudo." },
           ].map((s, i) => (
             <div key={i} className="text-center">
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-lg font-extrabold text-emerald-700">
@@ -145,6 +175,33 @@ export default function DemoPage() {
               </span>
               <h3 className="mt-4 text-lg font-bold text-zinc-800">{s.title}</h3>
               <p className="mt-2 text-sm text-zinc-500">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Diferenciais */}
+      <section className="rounded-3xl bg-gradient-to-br from-emerald-50 via-white to-amber-50 border border-emerald-200/60 p-8 sm:p-12">
+        <h2 className="text-center text-2xl font-extrabold tracking-tight text-zinc-900">
+          Por que Ivan ProfQuímica?
+        </h2>
+        <div className="mt-8 grid gap-6 sm:grid-cols-2">
+          {[
+            { icon: "⚡", title: "Zero custo operacional", desc: "Groq é gratuito e ilimitado. Supabase tem generous free tier. Vercel deploy grátis." },
+            { icon: "🤖", title: "IA em cada etapa", desc: "Geração de aulas, OCR de PDFs, assistente Pati para ações do dia a dia por texto." },
+            { icon: "🏫", title: "Multi-escola nativo", desc: "Cada escola com sua grade, turmas, alunos, notas e frequência separados. Visão geral unificada." },
+            { icon: "📱", title: "Mobile-first", desc: "Design responsivo. Funciona no celular, tablet e desktop. Use de onde estiver." },
+            { icon: "🔓", title: "Sem autenticação", desc: "Prototipagem sem barreiras. Único usuário (Ivan). Ideal para demonstração." },
+            { icon: "🗓️", title: "Kanban de horários", desc: "Visualize a semana toda de um golpe. Arraste, edite, adicione. Modo Geral funde todas as escolas." },
+          ].map((d, i) => (
+            <div key={i} className="flex items-start gap-4 p-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-md text-lg">
+                {d.icon}
+              </span>
+              <div>
+                <h3 className="text-sm font-bold text-zinc-800">{d.title}</h3>
+                <p className="mt-1 text-sm text-zinc-500">{d.desc}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -177,14 +234,17 @@ export default function DemoPage() {
             Pronto para usar?
           </h2>
           <p className="mt-2 text-emerald-100">
-            Comece agora — não precisa cadastro.
+            Sem cadastro, sem complicação. Teste agora mesmo.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4">
             <Link href="/dashboard" className="btn bg-white text-emerald-700 hover:bg-emerald-50 px-6 py-3 text-base font-bold shadow-lg">
-              🚀 Ir para o Dashboard
+              🚀 Dashboard
             </Link>
-            <Link href="/criar-aula" className="btn bg-emerald-800 hover:bg-emerald-900 text-white px-6 py-3 text-base font-bold shadow-lg">
-              ✦ Criar Aula Agora
+            <Link href="/horarios" className="btn bg-emerald-800 hover:bg-emerald-900 text-white px-6 py-3 text-base font-bold shadow-lg">
+              🗓️ Ver Horários
+            </Link>
+            <Link href="/pati" className="btn bg-purple-600 hover:bg-purple-500 text-white px-6 py-3 text-base font-bold shadow-lg">
+              🤖 Pati Assistente
             </Link>
           </div>
         </div>

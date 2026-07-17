@@ -268,17 +268,21 @@ export default function Horarios() {
                   <>
                     {getAulasMerged(dia.key).map((item, i) => {
                       const cores = corDaTurma(item.aula.turma)
+                      const escolaCor = item.escola === "IEFA" ? "bg-cyan-100 text-cyan-800 border-cyan-300" : "bg-orange-100 text-orange-800 border-orange-300"
                       return (
                         <div key={i}
                           className={`group relative rounded-xl border ${cores.bg} ${cores.border} cursor-default transition-all duration-150`}>
-                          <div className="absolute -top-2 -right-2 rounded-full bg-white border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-500 shadow-sm">
+                          {/* School header bar */}
+                          <div className={`rounded-t-xl px-3 py-1 text-[11px] font-extrabold tracking-wider uppercase border-b ${escolaCor}`}>
+                            {item.escola === "IEFA" ? "🏫 IEFA" : "🏫 OBJETIVO"}
+                          </div>
+                          <div className="absolute top-1 -right-2 rounded-full bg-white border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-500 shadow-sm">
                             {item.aula.inicio}
                           </div>
-                          <div className="p-3">
+                          <div className="p-3 pt-2">
                             <div className="flex items-center gap-2">
                               <span className={`h-3 w-3 shrink-0 rounded-full ${cores.dot}`} />
                               <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{item.aula.turma}</p>
-                              <span className="ml-auto text-[10px] font-semibold text-zinc-400 bg-white/60 rounded-full px-2 py-0.5 border border-zinc-200">{item.escola}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-xs font-semibold text-zinc-400">{item.aula.materia}</span>
