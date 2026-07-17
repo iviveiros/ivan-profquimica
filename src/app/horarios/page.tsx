@@ -35,6 +35,7 @@ const hojeIdx = new Date().getDay() - 1
 export default function Horarios() {
   const [escolas, setEscolas] = useState<EscolaComGrade[]>([])
   const [escolaAtiva, setEscolaAtiva] = useState("")
+  const [visaoGeral, setVisaoGeral] = useState(false)
   const [editando, setEditando] = useState(false)
   const [editCelula, setEditCelula] = useState<{ dia: DiaSemana; idx: number } | null>(null)
   const [editForm, setEditForm] = useState<Aula>({ inicio: "", fim: "", materia: "Química", turma: "" })
@@ -142,10 +143,22 @@ export default function Horarios() {
   }
 
   if (!escolas.length && !erro) return <div className="card p-12 text-center"><p className="text-zinc-500">Carregando...</p></div>
-  if (!escolaAtual) return <div className="card p-12 text-center"><p className="text-zinc-400">Nenhuma escola cadastrada. Crie uma abaixo.</p></div>
+  if (!escolaAtual && !visaoGeral) return <div className="card p-12 text-center"><p className="text-zinc-400">Nenhuma escola cadastrada. Crie uma abaixo.</p></div>
 
-  const grade = escolaAtual.grade
-  const total = Object.values(grade).flat().filter(Boolean).length
+  // Merge all schools into one general view
+  function getAulasMerged(dia: DiaSemana): { aula: Aula; escola: string }[] {
+    const result: { aula: Aula; escola: string }[] = []
+    for (const e of escolas) {
+      const aulas = e.grade?.[dia]?.filter((a): a is Aula => a !== null) || []
+      aulas.forEach(a => result.push({ aula: a, escola: e.nome }))
+    }
+    return result.sort((a, b) => a.aula.inicio.localeCompare(b.aula.inicio))
+  }
+
+  const grade = escolaAtual?.grade || escolas[0]?.grade
+  const total = visaoGeral
+    ? escolas.reduce((s, e) => s + Object.values(e.grade || {}).flat().filter(Boolean).length, 0)
+    : Object.values(grade || {}).flat().filter(Boolean).length
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -160,14 +173,16 @@ export default function Horarios() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">◈ Horários</h1>
-          <p className="mt-1.5 text-sm text-zinc-500">Grade kanban — {escolaAtual.nome}</p>
+          <p className="mt-1.5 text-sm text-zinc-500">{visaoGeral ? "Grade geral — todas as escolas" : `Grade kanban — ${escolaAtual?.nome || ""}`}</p>
         </div>
         <div className="flex items-center gap-3">
           {salvando && <span className="badge badge-emerald animate-pulse">salvando...</span>}
-          <button onClick={() => setEditando(!editando)}
-            className={`btn ${editando ? "btn-primary shadow-lg shadow-emerald-200" : "btn-secondary"}`}>
-            {editando ? "✅ Concluir" : "✏️ Editar"}
-          </button>
+          {!visaoGeral && (
+            <button onClick={() => setEditando(!editando)}
+              className={`btn ${editando ? "btn-primary shadow-lg shadow-emerald-200" : "btn-secondary"}`}>
+              {editando ? "✅ Concluir" : "✏️ Editar"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -175,9 +190,13 @@ export default function Horarios() {
       <div className="card flex flex-wrap items-center gap-3 p-4">
         <div className="flex items-center gap-2">
           <span className="text-lg">🏫</span>
-          <select value={escolaAtiva} onChange={e => setEscolaAtiva(e.target.value)} className="select text-sm min-w-[150px]">
+          <select value={visaoGeral ? "" : escolaAtiva} onChange={e => { setVisaoGeral(false); setEscolaAtiva(e.target.value) }} className="select text-sm min-w-[150px]">
             {escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
           </select>
+          <button onClick={() => { setVisaoGeral(!visaoGeral); if (!visaoGeral) setEditando(false) }}
+            className={`btn btn-sm ${visaoGeral ? "btn-primary shadow-lg shadow-emerald-200" : "btn-secondary"}`}>
+            🌐 Geral
+          </button>
         </div>
         <div className="flex-1" />
         {!mostrarNovaEscola ? (
@@ -202,8 +221,14 @@ export default function Horarios() {
         </div>
         <div className="card shrink-0 px-5 py-3 text-center">
           <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Turmas</p>
-          <p className="text-lg font-black text-emerald-600">{new Set(Object.values(grade).flat().filter((a): a is Aula => a !== null).map(a => a.turma)).size}</p>
+          <p className="text-lg font-black text-emerald-600">{visaoGeral ? new Set(escolas.flatMap(e => Object.values(e.grade || {}).flat().filter((a): a is Aula => a !== null).map(a => a.turma))).size : new Set(Object.values(grade || {}).flat().filter((a): a is Aula => a !== null).map(a => a.turma)).size}</p>
         </div>
+        {visaoGeral && (
+          <div className="card shrink-0 px-5 py-3 text-center">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Escolas</p>
+            <p className="text-lg font-black text-emerald-600">{escolas.length}</p>
+          </div>
+        )}
         <div className="flex gap-2 ml-auto items-center">
           <span className="inline-block h-3 w-3 rounded-full bg-amber-500" title="9º Ano" />
           <span className="text-[11px] text-zinc-500">9º</span>
@@ -219,8 +244,6 @@ export default function Horarios() {
       {/* Kanban Board */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {DIAS.map((dia, di) => {
-          const aulas = grade[dia.key].map((a, i) => ({ aula: a, idx: i })).filter(x => x.aula !== null)
-          const vazios = grade[dia.key].map((a, i) => ({ aula: a, idx: i })).filter(x => x.aula === null)
           const ehHoje = di === hojeIdx
           return (
             <div key={dia.key} className={`card overflow-hidden transition-all ${ehHoje ? "ring-2 ring-emerald-400/40 shadow-lg shadow-emerald-200/30" : ""}`}>
@@ -233,7 +256,7 @@ export default function Horarios() {
                   <div className="flex items-center gap-1.5">
                     {ehHoje && <span className="badge bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full">hoje</span>}
                     <span className={`text-[11px] font-semibold ${ehHoje ? "text-white/70" : "text-zinc-400"}`}>
-                      {aulas.length} {aulas.length === 1 ? "aula" : "aulas"}
+                      {visaoGeral ? getAulasMerged(dia.key).length : grade?.[dia.key]?.filter(Boolean).length || 0} {(visaoGeral ? getAulasMerged(dia.key).length : grade?.[dia.key]?.filter(Boolean).length || 0) === 1 ? "aula" : "aulas"}
                     </span>
                   </div>
                 </div>
@@ -241,64 +264,92 @@ export default function Horarios() {
 
               {/* Cards */}
               <div className="space-y-2 p-3 min-h-[200px]">
-                {/* Scheduled aulas */}
-                {aulas.sort((a, b) => {
-                  const ia = HORARIOS_BASE.findIndex(h => h.inicio === a.aula!.inicio)
-                  const ib = HORARIOS_BASE.findIndex(h => h.inicio === b.aula!.inicio)
-                  return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
-                }).map(({ aula, idx }) => {
-                  const cores = corDaTurma(aula!.turma)
-                  return (
-                    <div key={idx}
-                      className={`group relative rounded-xl border ${cores.bg} ${cores.border} ${editando ? "cursor-pointer hover:shadow-md active:scale-[0.98]" : "cursor-default"} transition-all duration-150`}
-                      onClick={() => editando && abrirEdicao(dia.key, idx, aula)}>
-                      {/* Time badge */}
-                      <div className="absolute -top-2 -right-2 rounded-full bg-white border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-500 shadow-sm">
-                        {aula!.inicio}
+                {visaoGeral ? (
+                  <>
+                    {getAulasMerged(dia.key).map((item, i) => {
+                      const cores = corDaTurma(item.aula.turma)
+                      return (
+                        <div key={i}
+                          className={`group relative rounded-xl border ${cores.bg} ${cores.border} cursor-default transition-all duration-150`}>
+                          <div className="absolute -top-2 -right-2 rounded-full bg-white border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-500 shadow-sm">
+                            {item.aula.inicio}
+                          </div>
+                          <div className="p-3">
+                            <div className="flex items-center gap-2">
+                              <span className={`h-3 w-3 shrink-0 rounded-full ${cores.dot}`} />
+                              <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{item.aula.turma}</p>
+                              <span className="ml-auto text-[10px] font-semibold text-zinc-400 bg-white/60 rounded-full px-2 py-0.5 border border-zinc-200">{item.escola}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-semibold text-zinc-400">{item.aula.materia}</span>
+                              <span className="text-[10px] font-mono text-zinc-300">• {item.aula.inicio}–{item.aula.fim}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {!getAulasMerged(dia.key).length && (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <span className="text-2xl mb-1 opacity-20">—</span>
+                        <p className="text-xs text-zinc-300">Sem aulas</p>
                       </div>
-                      <div className="p-3">
-                        <div className="flex items-center gap-2">
-                          <span className={`h-3 w-3 shrink-0 rounded-full ${cores.dot}`} />
-                          <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{aula!.turma}</p>
+                    )}
+                  </>
+                ) : grade ? (
+                  <>
+                    {grade[dia.key].map((a, idx) => a !== null ? (() => {
+                      const cores = corDaTurma(a.turma)
+                      return (
+                        <div key={idx}
+                          className={`group relative rounded-xl border ${cores.bg} ${cores.border} ${editando ? "cursor-pointer hover:shadow-md active:scale-[0.98]" : "cursor-default"} transition-all duration-150`}
+                          onClick={() => editando && abrirEdicao(dia.key, idx, a)}>
+                          <div className="absolute -top-2 -right-2 rounded-full bg-white border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-500 shadow-sm">
+                            {a.inicio}
+                          </div>
+                          <div className="p-3">
+                            <div className="flex items-center gap-2">
+                              <span className={`h-3 w-3 shrink-0 rounded-full ${cores.dot}`} />
+                              <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{a.turma}</p>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs font-semibold text-zinc-400">{a.materia}</span>
+                              <span className="text-[10px] font-mono text-zinc-300">• {a.inicio}–{a.fim}</span>
+                            </div>
+                          </div>
+                          {editando && (
+                            <div className="absolute inset-x-0 bottom-0 flex justify-center pb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <select onChange={e => { if (e.target.value) { moverAula(dia.key, idx, e.target.value as DiaSemana); e.target.value = "" } }} className="text-[10px] text-zinc-400 bg-transparent border-none outline-none cursor-pointer" onClick={e => e.stopPropagation()}>
+                                <option value="">Mover para...</option>
+                                {DIAS.filter(d => d.key !== dia.key).map(d => <option key={d.key} value={d.key}>{d.labelShort}</option>)}
+                              </select>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs font-semibold text-zinc-400">{aula!.materia}</span>
-                          <span className="text-[10px] font-mono text-zinc-300">• {aula!.inicio}–{aula!.fim}</span>
-                        </div>
+                      )
+                    })() : null)}
+                    {editando && grade[dia.key].map((a, idx) => a === null ? (
+                      <div key={`v-${idx}`}
+                        className="rounded-xl border-2 border-dashed border-zinc-200 p-3 text-center cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/50 transition-all"
+                        onClick={() => abrirEdicao(dia.key, idx, null)}>
+                        <span className="text-xs font-semibold text-zinc-300 hover:text-emerald-500">
+                          + {HORARIOS_BASE[idx]?.inicio || "novo"}
+                        </span>
                       </div>
-                      {/* Drag handle in edit mode */}
-                      {editando && (
-                        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <select onChange={e => { if (e.target.value) { moverAula(dia.key, idx, e.target.value as DiaSemana); e.target.value = "" } }} className="text-[10px] text-zinc-400 bg-transparent border-none outline-none cursor-pointer" onClick={e => e.stopPropagation()}>
-                            <option value="">Mover para...</option>
-                            {DIAS.filter(d => d.key !== dia.key).map(d => <option key={d.key} value={d.key}>{d.labelShort}</option>)}
-                          </select>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {/* Empty slots (add zone in edit mode) */}
-                {editando && vazios.map(({ idx }) => (
-                  <div key={`v-${idx}`}
-                    className="rounded-xl border-2 border-dashed border-zinc-200 p-3 text-center cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/50 transition-all"
-                    onClick={() => abrirEdicao(dia.key, idx, null)}>
-                    <span className="text-xs font-semibold text-zinc-300 hover:text-emerald-500">
-                      + {HORARIOS_BASE[idx]?.inicio || "novo"}
-                    </span>
-                  </div>
-                ))}
-
-                {!aulas.length && !editando && (
+                    ) : null)}
+                    {!grade[dia.key].some(a => a !== null) && !editando && (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <span className="text-2xl mb-1 opacity-20">—</span>
+                        <p className="text-xs text-zinc-300">Sem aulas</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center">
                     <span className="text-2xl mb-1 opacity-20">—</span>
                     <p className="text-xs text-zinc-300">Sem aulas</p>
                   </div>
                 )}
               </div>
-
-
             </div>
           )
         })}
