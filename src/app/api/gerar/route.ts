@@ -40,30 +40,31 @@ c) [opção]
 d) [opção]
 e) [opção]
 
-[Repetir até questão 10]
+[Repetir até questão 10]`
+
+const GABARITO_INSTRUCTION = `
+
+Após gerar as 10 questões acima, você DEVE obrigatoriamente adicionar um GABARITO completo no final com este formato exato (substituindo X pela letra correta de cada questão):
 
 ### Gabarito da Avaliação
 
 | Questão | Resposta |
 |---------|----------|
-| 1 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 2 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 3 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 4 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 5 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 6 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 7 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 8 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 9 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
-| 10 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 1 | X |
+| 2 | X |
+| 3 | X |
+| 4 | X |
+| 5 | X |
+| 6 | X |
+| 7 | X |
+| 8 | X |
+| 9 | X |
+| 10 | X |
 
-REGRAS PARA O GABARITO:
-- Cada questão tem 5 alternativas (a, b, c, d, e)
-- Determine a resposta correta para cada questão
-- Substitua "COLOQUE_AQUI_A_RESPOSTA_CORRETA" pela letra correta (APENAS A, B, C, D ou E, sem espaços)
-- NÃO deixe nenhum espaço em branco na coluna Resposta
-- Exemplo de linha preenchida: | 1 | C |`
+INSTRUÇÃO FINAL OBRIGATÓRIA: Você DEVE preencher o X com a letra correta (A, B, C, D ou E) de cada questão correspondente. NÃO deixe nenhuma resposta em branco. O gabarito é essencial para o professor corrigir as provas.`
 
+const FULL_PROMPT = (sistema: string, turma: string, topico: string) =>
+  PROMPT_TEMPLATE(sistema, turma, topico) + GABARITO_INSTRUCTION
 
 async function gerarComGroq(sistema: string, turma: string, topico: string) {
   const apiKey = process.env.GROQ_API_KEY
@@ -79,7 +80,7 @@ async function gerarComGroq(sistema: string, turma: string, topico: string) {
       model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: 'Você é um professor de Química experiente.' },
-        { role: 'user', content: PROMPT_TEMPLATE(sistema, turma, topico) }
+        { role: 'user', content: FULL_PROMPT(sistema, turma, topico) }
       ],
       temperature: 0.7,
       max_tokens: 6000,
@@ -98,7 +99,7 @@ async function gerarComGemini(sistema: string, turma: string, topico: string) {
     if (!model) return null
     try {
       const result = await model.generateContent([
-        { text: 'Você é um professor de Química experiente. ' + PROMPT_TEMPLATE(sistema, turma, topico) }
+        { text: 'Você é um professor de Química experiente. ' + FULL_PROMPT(sistema, turma, topico) }
       ])
       return result.response.text()
     } catch {
