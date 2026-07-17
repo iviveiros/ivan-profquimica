@@ -43,25 +43,21 @@ e) [opção]
 ### Questão 10
 
 ### Gabarito da Avaliação
+1. A
+2. B
+3. C
+4. D
+5. E
+6. A
+7. B
+8. C
+9. D
+10. E
 
-| Questão | Resposta |
-|---------|----------|
-| 1 | A |
-| 2 | B |
-| 3 | C |
-| 4 | D |
-| 5 | E |
-| 6 | A |
-| 7 | B |
-| 8 | C |
-| 9 | D |
-| 10 | E |
-
-REGRAS PARA O GABARITO:
-- As letras A-E acima são EXEMPLOS. Substitua cada uma pela resposta correta da questão correspondente.
+REGRAS DO GABARITO:
+- As letras A-E acima são EXEMPLOS. Substitua cada uma pela resposta correta.
 - Cada resposta é UMA letra: A, B, C, D ou E.
-- NÃO deixe nenhuma célula em branco.
-- NÃO remova a tabela. NÃO adicione colunas extras.`
+- NÃO deixe nenhuma linha em branco.`
 
 async function gerarComGroq(sistema: string, turma: string, topico: string) {
   const apiKey = process.env.GROQ_API_KEY
