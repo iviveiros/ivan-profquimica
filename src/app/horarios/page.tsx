@@ -96,7 +96,12 @@ export default function Horarios() {
 
   function abrirEdicao(dia: DiaSemana, idx: number, aula: Aula | null) {
     setEditCelula({ dia, idx })
-    setEditForm(aula || { inicio: HORARIOS_BASE[idx].inicio, fim: HORARIOS_BASE[idx].fim, materia: "Química", turma: "" })
+    if (aula) {
+      setEditForm({ ...aula })
+    } else {
+      const base = HORARIOS_BASE[idx]
+      setEditForm({ inicio: base?.inicio || "07:00", fim: base?.fim || "07:45", materia: "Química", turma: "" })
+    }
   }
 
   function salvarEdicao() {
@@ -131,7 +136,7 @@ export default function Horarios() {
     if (!aula) return
     const destIdx = grade[destDia].findIndex(x => x === null)
     if (destIdx === -1) return
-    grade[destDia][destIdx] = { ...aula, inicio: HORARIOS_BASE[destIdx].inicio, fim: HORARIOS_BASE[destIdx].fim }
+    grade[destDia][destIdx] = { ...aula }
     grade[origDia][origIdx] = null
     atualizarGrade(grade)
   }
@@ -237,7 +242,11 @@ export default function Horarios() {
               {/* Cards */}
               <div className="space-y-2 p-3 min-h-[200px]">
                 {/* Scheduled aulas */}
-                {aulas.sort((a, b) => HORARIOS_BASE.findIndex(h => h.inicio === a.aula!.inicio) - HORARIOS_BASE.findIndex(h => h.inicio === b.aula!.inicio)).map(({ aula, idx }) => {
+                {aulas.sort((a, b) => {
+                  const ia = HORARIOS_BASE.findIndex(h => h.inicio === a.aula!.inicio)
+                  const ib = HORARIOS_BASE.findIndex(h => h.inicio === b.aula!.inicio)
+                  return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+                }).map(({ aula, idx }) => {
                   const cores = corDaTurma(aula!.turma)
                   return (
                     <div key={idx}
@@ -276,7 +285,7 @@ export default function Horarios() {
                     className="rounded-xl border-2 border-dashed border-zinc-200 p-3 text-center cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/50 transition-all"
                     onClick={() => abrirEdicao(dia.key, idx, null)}>
                     <span className="text-xs font-semibold text-zinc-300 hover:text-emerald-500">
-                      + {HORARIOS_BASE[idx].inicio}
+                      + {HORARIOS_BASE[idx]?.inicio || "novo"}
                     </span>
                   </div>
                 ))}

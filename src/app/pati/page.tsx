@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from "react"
 import { getEscolas } from "@/services/escolas"
-import { getGrade } from "@/services/horarios"
+import { getGrade, salvarGrade } from "@/services/horarios"
+import type { Grade } from "@/services/horarios"
 import { supabase } from "@/lib/supabase"
 
 type Message = {
@@ -177,6 +178,66 @@ export default function Pati() {
             await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: true })
             linhas.push(`✅ Presença: ${aluno.nome} (${data})`)
           }
+        } else if (acao.tipo === "adicionar_aula") {
+          if (!grade || !escola?.id) {
+            linhas.push("Nenhuma escola carregada.")
+            continue
+          }
+          const dia: string = acao.dia
+          if (!grade[dia as keyof Grade]) {
+            linhas.push(`Dia inválido: ${dia}`)
+            continue
+          }
+          const g: any = { ...grade }
+          g[dia] = [...(g[dia] || []), { inicio: acao.inicio, fim: acao.fim, materia: acao.materia, turma: acao.turma }]
+          await salvarGrade(escola.id, g as Grade)
+          setGrade(g as Grade)
+          linhas.push(`➕ Aula adicionada ${dia}-feira: ${acao.materia} - ${acao.turma} (${acao.inicio}-${acao.fim})`)
+        } else if (acao.tipo === "editar_aula") {
+          if (!grade || !escola?.id) {
+            linhas.push("Nenhuma escola carregada.")
+            continue
+          }
+          const dia: string = acao.dia
+          const indice: number = acao.indice
+          if (!grade[dia as keyof Grade] || indice < 0 || indice >= grade[dia as keyof Grade]!.length) {
+            linhas.push(`Índice inválido: ${indice} para ${dia}-feira`)
+            continue
+          }
+          const aulaAtual = grade[dia as keyof Grade]![indice]
+          if (!aulaAtual) {
+            linhas.push(`Nenhuma aula no índice ${indice} da ${dia}-feira`)
+            continue
+          }
+          const g: any = { ...grade }
+          g[dia] = [...g[dia]]
+          g[dia][indice] = {
+            inicio: acao.inicio || aulaAtual.inicio,
+            fim: acao.fim || aulaAtual.fim,
+            materia: acao.materia || aulaAtual.materia,
+            turma: acao.turma || aulaAtual.turma,
+          }
+          await salvarGrade(escola.id, g as Grade)
+          setGrade(g as Grade)
+          linhas.push(`✏️ Aula ${indice + 1} de ${dia}-feira atualizada: ${g[dia][indice].materia} - ${g[dia][indice].turma} (${g[dia][indice].inicio}-${g[dia][indice].fim})`)
+        } else if (acao.tipo === "remover_aula") {
+          if (!grade || !escola?.id) {
+            linhas.push("Nenhuma escola carregada.")
+            continue
+          }
+          const dia: string = acao.dia
+          const indice: number = acao.indice
+          if (!grade[dia as keyof Grade] || indice < 0 || indice >= grade[dia as keyof Grade]!.length) {
+            linhas.push(`Índice inválido: ${indice} para ${dia}-feira`)
+            continue
+          }
+          const aulaRemovida = grade[dia as keyof Grade]![indice]
+          const g: any = { ...grade }
+          g[dia] = [...g[dia]]
+          g[dia][indice] = null
+          await salvarGrade(escola.id, g as Grade)
+          setGrade(g as Grade)
+          linhas.push(`🗑️ Aula ${indice + 1} de ${dia}-feira removida${aulaRemovida ? `: ${aulaRemovida.materia} - ${aulaRemovida.turma}` : ""}`)
         } else if (acao.tipo === "listar_alunos") {
           const filtrados = acao.turma
             ? alunos.filter((a: any) => a.turma_nome.toLowerCase() === acao.turma.toLowerCase())
@@ -334,6 +395,9 @@ export default function Pati() {
       if (a.tipo === "listar_alunos") return `📋 Listar alunos${a.turma ? ` da turma ${a.turma}` : ""}`
       if (a.tipo === "sortear_aluno") return `🎲 Sortear aluno${a.turma ? ` da turma ${a.turma}` : ""}`
       if (a.tipo === "consultar_horarios") return `📅 Consultar horários${a.dia ? ` de ${a.dia}` : ""}`
+      if (a.tipo === "adicionar_aula") return `➕ Adicionar aula: ${a.materia} - ${a.turma} (${a.dia}, ${a.inicio}-${a.fim})`
+      if (a.tipo === "editar_aula") return `✏️ Editar aula ${a.indice + 1} de ${a.dia}`
+      if (a.tipo === "remover_aula") return `🗑️ Remover aula ${a.indice + 1} de ${a.dia}`
       return ""
     }).filter(Boolean).join("\n")
   }
@@ -368,6 +432,9 @@ export default function Pati() {
                         {a.tipo === "listar_alunos" && <>📋 Listar alunos{a.turma ? ` (${a.turma})` : ""}</>}
                         {a.tipo === "sortear_aluno" && <>🎲 Sortear aluno{a.turma ? ` (${a.turma})` : ""}</>}
                         {a.tipo === "consultar_horarios" && <>📅 Horários{a.dia ? ` (${a.dia})` : ""}</>}
+                        {a.tipo === "adicionar_aula" && <>➕ Adicionar: {a.materia} - {a.turma} ({a.dia} {a.inicio}-{a.fim})</>}
+                        {a.tipo === "editar_aula" && <>✏️ Editar aula {a.indice + 1} de {a.dia}</>}
+                        {a.tipo === "remover_aula" && <>🗑️ Remover aula {a.indice + 1} de {a.dia}</>}
                       </div>
                     ))}
                   </div>

@@ -71,6 +71,9 @@ REGRAS:
 - LISTAR: type="resposta" com acao listar_alunos + turma (opcional)
 - SORTEAR: type="resposta" com acao sortear_aluno + turma (opcional)
 - HORARIOS: type="resposta" com acao consultar_horarios + dia (opcional). Se "hoje" ou sem dia, usa o dia atual. Se pergunta sobre "proxima aula", inclua "proxima":true na acao.
+- ADICIONAR AULA: type="confirmacao" com acao adicionar_aula + dia, inicio, fim, materia, turma. Ex: "adicionar aula de Quimica na segunda as 08h"
+- EDITAR AULA: type="confirmacao" com acao editar_aula + dia, indice (numero da posicao na grade), e os campos que mudar (inicio, fim, materia, turma). Ex: "mudar a aula 2 de terca para Quimica"
+- REMOVER AULA: type="confirmacao" com acao remover_aula + dia, indice. Ex: "remover a primeira aula de quinta"
 - Detecte TODAS as ações pedidas pelo usuário
 - Se faltar info → type="pergunta" SEM acoes
 - Se tem tudo → type="confirmacao" COM acoes e peça confirmação
@@ -78,7 +81,7 @@ REGRAS:
 - Usuário confirmar → type="executar" com mesmas acoes
 
 RESPONDA APENAS ESTE JSON (sem markdown, sem texto extra):
-{"type":"pergunta"|"confirmacao"|"executar"|"resposta","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"},{"tipo":"listar_alunos","turma":"TURMA"},{"tipo":"sortear_aluno","turma":"TURMA"},{"tipo":"consultar_horarios","dia":"segunda|terca|quarta|quinta|sexta","proxima":true}]}
+{"type":"pergunta"|"confirmacao"|"executar"|"resposta","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"},{"tipo":"listar_alunos","turma":"TURMA"},{"tipo":"sortear_aluno","turma":"TURMA"},{"tipo":"consultar_horarios","dia":"segunda|terca|quarta|quinta|sexta","proxima":true},{"tipo":"adicionar_aula","dia":"segunda","inicio":"07:10","fim":"08:00","materia":"Quimica","turma":"9 Ano A"},{"tipo":"editar_aula","dia":"terca","indice":2,"materia":"Quimica"},{"tipo":"remover_aula","dia":"quinta","indice":0}]}
 
 IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
 
