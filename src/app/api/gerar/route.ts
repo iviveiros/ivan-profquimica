@@ -46,18 +46,23 @@ e) [opção]
 
 | Questão | Resposta |
 |---------|----------|
-| 1 | A |
-| 2 | B |
-| 3 | C |
-| 4 | D |
-| 5 | E |
-| 6 | A |
-| 7 | B |
-| 8 | C |
-| 9 | D |
-| 10 | E |
+| 1 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 2 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 3 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 4 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 5 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 6 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 7 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 8 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 9 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
+| 10 | COLOQUE_AQUI_A_RESPOSTA_CORRETA |
 
-IMPORTANTE: As letras acima são EXEMPLOS. Você DEVE substituir cada resposta pela letra correta da questão correspondente. Cada questão tem APENAS UMA resposta correta (A, B, C, D ou E). NÃO deixe nenhuma célula em branco.`
+REGRAS PARA O GABARITO:
+- Cada questão tem 5 alternativas (a, b, c, d, e)
+- Determine a resposta correta para cada questão
+- Substitua "COLOQUE_AQUI_A_RESPOSTA_CORRETA" pela letra correta (APENAS A, B, C, D ou E, sem espaços)
+- NÃO deixe nenhum espaço em branco na coluna Resposta
+- Exemplo de linha preenchida: | 1 | C |`
 
 
 async function gerarComGroq(sistema: string, turma: string, topico: string) {
