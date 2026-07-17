@@ -1,31 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGeminiModel, rebaixarModelo } from '@/lib/gemini'
 
-const PROMPT_TEMPLATE = (sistema: string, turma: string, topico: string) => `
+const GERAR_PROMPT = (sistema: string, turma: string, topico: string) => `
 Você é um professor de Química do sistema ${sistema}.
 Gere para a turma ${turma} sobre o tópico: "${topico}".
 
-Formate EXATAMENTE como abaixo, usando MARKDOWN, com as seções separadas por "---":
+Sua resposta DEVE seguir EXATAMENTE este formato (seções separadas por "---"):
 
 # Resumo da Aula
 
-[Texto didático com teoria, exemplos, dicas e destaques. Linguagem adequada à série.]
+[texto didático com teoria, exemplos, dicas. Linguagem adequada à série.]
 
 ---
 
 # Exercícios — Bateria de Estudo
 
-1. [Questão 1]
-2. [Questão 2]
+1. [questão 1]
+2. [questão 2]
 ...
-15. [Questão 15]
-
-(Variar tipos: múltipla escolha, V/F, dissertativas curtas, associação)
+15. [questão 15]
 
 ### Gabarito dos Exercícios
-
-1. [Resposta 1]
-2. [Resposta 2]
+1. [resposta 1]
+2. [resposta 2]
 ...
 
 ---
@@ -33,38 +30,38 @@ Formate EXATAMENTE como abaixo, usando MARKDOWN, com as seções separadas por "
 # Avaliação — 10 Questões de Múltipla Escolha
 
 ### Questão 01
-[Enunciado]
+[enunciado]
 a) [opção]
 b) [opção]
 c) [opção]
 d) [opção]
 e) [opção]
 
-[Repetir até questão 10]`
+### Questão 02
+...
 
-const GABARITO_INSTRUCTION = `
-
-Após gerar as 10 questões acima, você DEVE obrigatoriamente adicionar um GABARITO completo no final com este formato exato (substituindo X pela letra correta de cada questão):
+### Questão 10
 
 ### Gabarito da Avaliação
 
 | Questão | Resposta |
 |---------|----------|
-| 1 | X |
-| 2 | X |
-| 3 | X |
-| 4 | X |
-| 5 | X |
-| 6 | X |
-| 7 | X |
-| 8 | X |
-| 9 | X |
-| 10 | X |
+| 1 | A |
+| 2 | B |
+| 3 | C |
+| 4 | D |
+| 5 | E |
+| 6 | A |
+| 7 | B |
+| 8 | C |
+| 9 | D |
+| 10 | E |
 
-INSTRUÇÃO FINAL OBRIGATÓRIA: Você DEVE preencher o X com a letra correta (A, B, C, D ou E) de cada questão correspondente. NÃO deixe nenhuma resposta em branco. O gabarito é essencial para o professor corrigir as provas.`
-
-const FULL_PROMPT = (sistema: string, turma: string, topico: string) =>
-  PROMPT_TEMPLATE(sistema, turma, topico) + GABARITO_INSTRUCTION
+REGRAS PARA O GABARITO:
+- As letras A-E acima são EXEMPLOS. Substitua cada uma pela resposta correta da questão correspondente.
+- Cada resposta é UMA letra: A, B, C, D ou E.
+- NÃO deixe nenhuma célula em branco.
+- NÃO remova a tabela. NÃO adicione colunas extras.`
 
 async function gerarComGroq(sistema: string, turma: string, topico: string) {
   const apiKey = process.env.GROQ_API_KEY
@@ -79,11 +76,11 @@ async function gerarComGroq(sistema: string, turma: string, topico: string) {
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
       messages: [
-        { role: 'system', content: 'Você é um professor de Química experiente.' },
-        { role: 'user', content: FULL_PROMPT(sistema, turma, topico) }
+        { role: 'system', content: 'Você é um professor de Química experiente. Sua resposta deve seguir rigorosamente o formato solicitado pelo usuário, incluindo todas as seções e tabelas. Não omita nada.' },
+        { role: 'user', content: GERAR_PROMPT(sistema, turma, topico) }
       ],
       temperature: 0.7,
-      max_tokens: 6000,
+      max_tokens: 8000,
     }),
   })
 
@@ -99,7 +96,7 @@ async function gerarComGemini(sistema: string, turma: string, topico: string) {
     if (!model) return null
     try {
       const result = await model.generateContent([
-        { text: 'Você é um professor de Química experiente. ' + FULL_PROMPT(sistema, turma, topico) }
+        { text: 'Você é um professor de Química experiente. Sua resposta deve seguir rigorosamente o formato solicitado, incluindo todas as seções e tabelas. ' + GERAR_PROMPT(sistema, turma, topico) }
       ])
       return result.response.text()
     } catch {
