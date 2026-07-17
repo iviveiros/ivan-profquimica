@@ -46,18 +46,18 @@ e) [opção]
 
 | Questão | Resposta |
 |---------|----------|
-| 1 | |
-| 2 | |
-| 3 | |
-| 4 | |
-| 5 | |
-| 6 | |
-| 7 | |
-| 8 | |
-| 9 | |
-| 10 | |
+| 1 | A |
+| 2 | B |
+| 3 | C |
+| 4 | D |
+| 5 | E |
+| 6 | A |
+| 7 | B |
+| 8 | C |
+| 9 | D |
+| 10 | E |
 
-IMPORTANTE: Preencha o gabarito acima com as respostas corretas (A, B, C, D ou E) nas linhas correspondentes. Não deixe em branco.`
+IMPORTANTE: As letras acima são EXEMPLOS. Você DEVE substituir cada resposta pela letra correta da questão correspondente. Cada questão tem APENAS UMA resposta correta (A, B, C, D ou E). NÃO deixe nenhuma célula em branco.`
 
 
 async function gerarComGroq(sistema: string, turma: string, topico: string) {
@@ -77,7 +77,7 @@ async function gerarComGroq(sistema: string, turma: string, topico: string) {
         { role: 'user', content: PROMPT_TEMPLATE(sistema, turma, topico) }
       ],
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: 6000,
     }),
   })
 

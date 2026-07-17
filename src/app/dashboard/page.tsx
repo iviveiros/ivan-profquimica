@@ -119,10 +119,10 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-1">
               {ultimasAulas.map((a, i) => (
-                <div key={i} className="flex items-center justify-between rounded-lg px-3 py-2.5 row-hover stagger-item">
+                <Link key={i} href={`/aula/${a.id}`} className="flex items-center justify-between rounded-lg px-3 py-2.5 row-hover stagger-item transition-colors">
                   <span className="text-sm font-medium text-zinc-700 truncate">{a.topico}</span>
                   <span className="text-xs text-zinc-400 shrink-0 ml-2">{new Date(a.created_at).toLocaleDateString("pt-BR")}</span>
-                </div>
+                </Link>
               ))}
             </div>
           )}
