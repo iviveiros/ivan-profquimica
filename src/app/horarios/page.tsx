@@ -23,6 +23,7 @@ const HORARIOS_BASE = [
 ]
 
 function corDaTurma(turma: string): { bg: string; border: string; text: string; dot: string; label: string } {
+  if (turma.includes("6º") || turma.includes("6o")) return { bg: "bg-teal-50 border-teal-200 hover:border-teal-400", border: "border-teal-200", text: "text-teal-800", dot: "bg-teal-500", label: "teal" }
   if (turma.includes("9º") || turma.includes("9o")) return { bg: "bg-amber-50 border-amber-200 hover:border-amber-400", border: "border-amber-200", text: "text-amber-800", dot: "bg-amber-500", label: "amber" }
   if (turma.includes("1ª") || turma.includes("1º") || turma.includes("1a")) return { bg: "bg-blue-50 border-blue-200 hover:border-blue-400", border: "border-blue-200", text: "text-blue-800", dot: "bg-blue-500", label: "blue" }
   if (turma.includes("2ª") || turma.includes("2º") || turma.includes("2a")) return { bg: "bg-violet-50 border-violet-200 hover:border-violet-400", border: "border-violet-200", text: "text-violet-800", dot: "bg-violet-500", label: "violet" }
@@ -38,7 +39,7 @@ export default function Horarios() {
   const [visaoGeral, setVisaoGeral] = useState(false)
   const [editando, setEditando] = useState(false)
   const [editCelula, setEditCelula] = useState<{ dia: DiaSemana; idx: number } | null>(null)
-  const [editForm, setEditForm] = useState<Aula>({ inicio: "", fim: "", materia: "Química", turma: "" })
+  const [editForm, setEditForm] = useState<Aula>({ inicio: "", fim: "", materia: "Ciências da Natureza", turma: "" })
   const [novaEscolaNome, setNovaEscolaNome] = useState("")
   const [mostrarNovaEscola, setMostrarNovaEscola] = useState(false)
   const [turmasList, setTurmasList] = useState<string[]>([])
@@ -101,7 +102,7 @@ export default function Horarios() {
       setEditForm({ ...aula })
     } else {
       const base = HORARIOS_BASE[idx]
-      setEditForm({ inicio: base?.inicio || "07:00", fim: base?.fim || "07:45", materia: "Química", turma: "" })
+      setEditForm({ inicio: base?.inicio || "07:00", fim: base?.fim || "07:45", materia: "Ciências da Natureza", turma: "" })
     }
   }
 
