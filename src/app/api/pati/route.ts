@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
-const MODEL = "llama-3.3-70b-versatile"
+const GROQ_MODELS = ["llama-4-scout-17b-16e-instruct", "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]
 
 // In-memory rate limiter: max 10 requests per minute per IP
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -94,33 +94,51 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
     { role: "user", content: mensagem },
   ]
 
-  // Try Groq first, fall back to Gemini on failure
+  // Try Groq models first (rotate on 429), fall back to Gemini
   let content = ""
-  let usadoGemini = false
+  let groqSuccess = false
+  for (const model of GROQ_MODELS) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model, messages, temperature: 0, max_tokens: 1500 }),
+      })
 
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${GROQ_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model: MODEL, messages, temperature: 0, max_tokens: 1500 }),
-    })
-
-    if (!res.ok) {
-      throw new Error(`Groq error: ${res.status}`)
+      if (res.ok) {
+        const data = await res.json()
+        content = data.choices?.[0]?.message?.content || ""
+        groqSuccess = true
+        break
+      }
+      // 429 = rate limited, try next model
+      if (res.status !== 429) {
+        throw new Error(`Groq error: ${res.status}`)
+      }
+    } catch (groqErr: any) {
+      if (groqErr.message?.includes("429")) continue
+      throw groqErr
     }
+  }
 
-    const data = await res.json()
-    content = data.choices?.[0]?.message?.content || ""
-  } catch (groqErr: any) {
-    const gemKey = process.env.GEMINI_API_KEY
-    if (!gemKey) {
-      return NextResponse.json({ type: "erro", mensagem: `Groq esgotou (429) e chave Gemini não configurada.` })
+  if (groqSuccess) {
+    const parsed = extrairJson(content)
+    if (parsed) {
+      return NextResponse.json({
+        ...parsed,
+        mensagem: parsed.mensagem || (parsed.type === "executar" ? "Pronto!" : "Como posso ajudar?"),
+      })
     }
+    return NextResponse.json({ type: "pergunta", mensagem: "Não consegui processar. Pode reformular de outro jeito?" })
+  }
+
+  // All Groq models exhausted, try Gemini
+  const gemKey = process.env.GEMINI_API_KEY
+  if (gemKey) {
     const geminiModels = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
-    let geminiSuccess = false
     for (const modelName of geminiModels) {
       try {
         const geminiMessages = messages.map(m => ({
@@ -145,15 +163,15 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
         }
         const data = await res.json()
         content = data?.candidates?.[0]?.content?.parts?.[0]?.text || ""
-        if (content) { geminiSuccess = true; break }
+        if (content) { groqSuccess = true; break }
       } catch (gemErr: any) {
         console.warn(`Gemini ${modelName} falhou:`, gemErr.message)
       }
     }
-    if (!geminiSuccess) {
-      return NextResponse.json({ type: "erro", mensagem: `Groq esgotou (429) e todos os modelos Gemini falharam. Tente de novo em 1 minuto.` })
-    }
-    usadoGemini = true
+  }
+
+  if (!groqSuccess) {
+    return NextResponse.json({ type: "erro", mensagem: `Groq e Gemini sem resposta. Aguarde 1 minuto e tente de novo.` })
   }
 
   const parsed = extrairJson(content)
