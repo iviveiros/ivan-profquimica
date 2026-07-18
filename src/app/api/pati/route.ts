@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGeminiModel, rebaixarModelo } from '@/lib/gemini'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const MODEL = "llama-3.3-70b-versatile"
@@ -116,13 +115,14 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
     const data = await res.json()
     content = data.choices?.[0]?.message?.content || ""
   } catch (groqErr: any) {
-    console.warn("Groq falhou, tentando Gemini:", groqErr.message)
+    const gemKey = process.env.GEMINI_API_KEY
+    if (!gemKey) {
+      return NextResponse.json({ type: "erro", mensagem: `Groq esgotou (429) e chave Gemini não configurada.` })
+    }
     const geminiModels = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
     let geminiSuccess = false
     for (const modelName of geminiModels) {
       try {
-        const ai = getGeminiModel(modelName)
-        if (!ai) throw new Error("Sem API key do Gemini")
         const geminiMessages = messages.map(m => ({
           role: m.role === "system" ? "user" : m.role,
           parts: [{ text: m.content }],
@@ -133,15 +133,25 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
             parts: [{ text: `INSTRUÇÃO: ${messages[0].content}\n\nLEMBRE-SE: responda APENAS JSON válido, sem markdown.` }],
           }
         }
-        const result = await ai.generateContent({ contents: geminiMessages })
-        content = result.response?.text() || ""
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${gemKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: geminiMessages }),
+        })
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => "")
+          console.warn(`Gemini ${modelName} HTTP ${res.status}:`, errBody.slice(0, 200))
+          continue
+        }
+        const data = await res.json()
+        content = data?.candidates?.[0]?.content?.parts?.[0]?.text || ""
         if (content) { geminiSuccess = true; break }
       } catch (gemErr: any) {
         console.warn(`Gemini ${modelName} falhou:`, gemErr.message)
       }
     }
     if (!geminiSuccess) {
-      return NextResponse.json({ type: "erro", mensagem: `Groq esgotou (429) e Gemini também falhou sem resposta. Tente de novo em 1 minuto.` })
+      return NextResponse.json({ type: "erro", mensagem: `Groq esgotou (429) e todos os modelos Gemini falharam. Tente de novo em 1 minuto.` })
     }
     usadoGemini = true
   }
