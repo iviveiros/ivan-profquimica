@@ -117,32 +117,33 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
     content = data.choices?.[0]?.message?.content || ""
   } catch (groqErr: any) {
     console.warn("Groq falhou, tentando Gemini:", groqErr.message)
-    try {
-      const model = getGeminiModel()
-      if (model) {
+    const geminiModels = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
+    let geminiSuccess = false
+    for (const modelName of geminiModels) {
+      try {
+        const ai = getGeminiModel(modelName)
+        if (!ai) throw new Error("Sem API key do Gemini")
         const geminiMessages = messages.map(m => ({
           role: m.role === "system" ? "user" : m.role,
           parts: [{ text: m.content }],
         }))
-        // Prepend system prompt as first user message with instruction
         if (messages[0]?.role === "system") {
           geminiMessages[0] = {
             role: "user",
             parts: [{ text: `INSTRUÇÃO: ${messages[0].content}\n\nLEMBRE-SE: responda APENAS JSON válido, sem markdown.` }],
           }
         }
-        const result = await model.generateContent({ contents: geminiMessages })
+        const result = await ai.generateContent({ contents: geminiMessages })
         content = result.response?.text() || ""
-        usadoGemini = true
-      } else {
-        throw new Error("Sem API key do Gemini")
+        if (content) { geminiSuccess = true; break }
+      } catch (gemErr: any) {
+        console.warn(`Gemini ${modelName} falhou:`, gemErr.message)
       }
-    } catch (gemErr: any) {
-      if (gemErr.message?.includes("429") || gemErr.status === 429 || gemErr.message?.includes("quota")) {
-        rebaixarModelo()
-      }
-      return NextResponse.json({ type: "erro", mensagem: `Erro: ${groqErr.message}${gemErr.message ? " (Gemini também falhou)" : ""}` })
     }
+    if (!geminiSuccess) {
+      return NextResponse.json({ type: "erro", mensagem: `Groq esgotou (429) e Gemini também falhou sem resposta. Tente de novo em 1 minuto.` })
+    }
+    usadoGemini = true
   }
 
   const parsed = extrairJson(content)
