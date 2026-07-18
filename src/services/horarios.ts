@@ -67,16 +67,22 @@ export async function getProximasAulas(): Promise<string[]> {
     const escolas = await getEscolasComGrade()
     if (!escolas.length) return []
 
-    const diaIdx = new Date().getDay() - 1
+    const agora = new Date()
+    const diaIdx = agora.getDay() - 1
     if (diaIdx < 0 || diaIdx > 4) return []
     const diaSemana = DIAS_PT[diaIdx]
+    const minutosAgora = agora.getHours() * 60 + agora.getMinutes()
 
     const result: string[] = []
     for (const escola of escolas) {
       if (!escola.grade?.[diaSemana]) continue
       const aulasHoje = escola.grade[diaSemana].filter((a): a is Aula => a !== null)
       for (const a of aulasHoje) {
-        result.push(`${a.inicio}-${a.fim} ${a.materia} ${a.turma} (${escola.nome})`)
+        const [hFim, mFim] = a.fim.split(":").map(Number)
+        const minutosFim = hFim * 60 + mFim
+        if (minutosFim > minutosAgora) {
+          result.push(`${a.inicio}-${a.fim} ${a.materia} ${a.turma} (${escola.nome})`)
+        }
       }
     }
     return result
