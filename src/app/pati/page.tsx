@@ -5,7 +5,7 @@ import { getEscolas } from "@/services/escolas"
 import { getGrade, salvarGrade } from "@/services/horarios"
 import type { Grade } from "@/services/horarios"
 import { supabase } from "@/lib/supabase"
-import { criarAluno } from "@/services/alunos"
+import { criarAluno, removerAluno } from "@/services/alunos"
 
 type Message = {
   role: "user" | "assistant"
@@ -139,6 +139,7 @@ export default function Pati() {
       a.valor = String(a.valor)
     }
     if (!a.tipo && a.nome && a.turma) a.tipo = "adicionar_aluno"
+    if (!a.tipo && a.nome && !a.turma && !a.valor && !a.disciplina) a.tipo = "remover_aluno"
     if (!a.tipo && (a.valor || a.nota)) a.tipo = "lancar_nota"
     if (!a.tipo && a.alunos?.length) a.tipo = "marcar_falta"
     return a
@@ -200,6 +201,17 @@ export default function Pati() {
           const alunosAtualizados = await import("@/services/alunos").then(m => m.getAlunos(escola.id))
           setAlunos(alunosAtualizados)
           linhas.push(`✅ Aluno adicionado: ${acao.nome} (${acao.turma})`)
+        } else if (acao.tipo === "remover_aluno") {
+          const nomeBusca = (acao.nome || "").toLowerCase().trim()
+          const aluno = alunos.find((a: any) => a.nome?.toLowerCase().includes(nomeBusca))
+          if (!aluno) {
+            linhas.push(`⚠️ Aluno não encontrado: ${acao.nome}`)
+            continue
+          }
+          await removerAluno(aluno.id)
+          const alunosAtualizados2 = alunos.filter((a: any) => a.id !== aluno.id)
+          setAlunos(alunosAtualizados2)
+          linhas.push(`🗑️ Aluno removido: ${aluno.nome}`)
         } else if (acao.tipo === "adicionar_aula") {
           if (!grade || !escola?.id) {
             linhas.push("Nenhuma escola carregada.")
@@ -418,6 +430,7 @@ export default function Pati() {
       if (a.tipo === "sortear_aluno") return `🎲 Sortear aluno${a.turma ? ` da turma ${a.turma}` : ""}`
       if (a.tipo === "consultar_horarios") return `📅 Consultar horários${a.dia ? ` de ${a.dia}` : ""}`
       if (a.tipo === "adicionar_aluno") return `👤 Adicionar aluno: ${a.nome} (${a.turma})`
+      if (a.tipo === "remover_aluno") return `🗑️ Remover aluno: ${a.nome}`
       if (a.tipo === "adicionar_aula") return `➕ Adicionar aula: ${a.materia} - ${a.turma} (${a.dia}, ${a.inicio}-${a.fim})`
       if (a.tipo === "editar_aula") return `✏️ Editar aula ${a.indice + 1} de ${a.dia}`
       if (a.tipo === "remover_aula") return `🗑️ Remover aula ${a.indice + 1} de ${a.dia}`
