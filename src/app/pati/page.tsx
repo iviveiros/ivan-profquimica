@@ -20,6 +20,7 @@ export default function Pati() {
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [alunos, setAlunos] = useState<any[]>([])
+  const [escolas, setEscolas] = useState<any[]>([])
   const [escola, setEscola] = useState<any>(null)
   const [grade, setGrade] = useState<any>(null)
   const [pendentes, setPendentes] = useState<any[]>([])
@@ -31,10 +32,11 @@ export default function Pati() {
   useEffect(() => {
     async function init() {
       try {
-        const escolas = await getEscolas()
-        if (escolas.length) {
-          setEscola(escolas[0])
-          const g = await getGrade(escolas[0].id)
+        const lista = await getEscolas()
+        setEscolas(lista)
+        if (lista.length) {
+          setEscola(lista[0])
+          const g = await getGrade(lista[0].id)
           if (g) setGrade(g)
         }
       } catch {}
@@ -98,6 +100,19 @@ export default function Pati() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function mudarEscola(escolaId: string) {
+    const e = escolas.find(x => x.id === escolaId)
+    if (!e) return
+    setEscola(e)
+    setMessages(prev => [...prev, { role: "assistant", content: `🏫 Escola alterada para ${e.nome}` }])
+    try {
+      const g = await getGrade(e.id)
+      if (g) setGrade(g)
+      const { data } = await supabase.from("alunos").select("id, nome, turma_nome").order("nome")
+      if (data) setAlunos(data)
+    } catch {}
   }
 
   async function confirmarAcao() {
@@ -181,11 +196,16 @@ export default function Pati() {
             linhas.push(`✅ Presença: ${aluno.nome} (${data})`)
           }
         } else if (acao.tipo === "adicionar_aluno") {
-          if (!escola?.id) {
-            linhas.push("⚠️ Nenhuma escola selecionada.")
+          let escolaId = escola?.id
+          if (acao.escola) {
+            const e = escolas.find((x: any) => x.nome.toLowerCase() === acao.escola.toLowerCase())
+            if (e) escolaId = e.id
+          }
+          if (!escolaId) {
+            linhas.push("⚠️ Escola não encontrada.")
             continue
           }
-          await criarAluno({ nome: acao.nome, turma_nome: acao.turma, escola_id: escola.id })
+          await criarAluno({ nome: acao.nome, turma_nome: acao.turma, escola_id: escolaId })
           const alunosAtualizados = await import("@/services/alunos").then(m => m.getAlunos(escola.id))
           setAlunos(alunosAtualizados)
           linhas.push(`✅ Aluno adicionado: ${acao.nome} (${acao.turma})`)
@@ -416,12 +436,18 @@ export default function Pati() {
 
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <div>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">🤖 Pati</h1>
-          <p className="mt-1.5 text-sm text-zinc-500">Lançar notas, faltas, lista, sorteio e horários</p>
+          <select value={escola?.id || ""} onChange={e => mudarEscola(e.target.value)}
+            className="select text-sm max-w-[140px]">
+            {escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+          </select>
         </div>
-        <span className="badge badge-emerald animate-pulse">online</span>
+        <div className="flex items-center gap-3">
+          {escola && <span className="text-xs text-zinc-400">🏫 {escola.nome}</span>}
+          <span className="badge badge-emerald animate-pulse">online</span>
+        </div>
       </div>
 
       <div className="card flex-1 flex flex-col overflow-hidden">
