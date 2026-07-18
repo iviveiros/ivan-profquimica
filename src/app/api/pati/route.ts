@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ type: "pergunta", mensagem: "Formato inválido." })
   }
 
-  const { mensagem, historico, alunos, escola, grade, acoesPendentes } = body
+  const { mensagem, historico, alunos, escola, grade, acoesPendentes, todasEscolas } = body
   if (!mensagem?.trim()) {
     return NextResponse.json({ type: "pergunta", mensagem: "Diga algo!" })
   }
@@ -60,14 +60,15 @@ export async function POST(req: NextRequest) {
   const systemPrompt = `Você é a Pati, assistente do Prof. Ivan.
 
 CONTEXTO:
-- Escola: ${escola?.nome || "N/A"} | Hoje: ${hoje} (${diaSemana}-feira)
+- Escola ativa: ${escola?.nome || "N/A"} | Hoje: ${hoje} (${diaSemana}-feira)
+- Escolas disponíveis: ${todasEscolas?.join(", ") || "N/A"}
 - Alunos:\n${alunosList || "Nenhum"}
 - Grade horarios (JSON):\n${gradeStr}
 
 REGRAS:
 - Se nome incompleto → peça nome completo E turma
 - NOTAS: precisa nome, turma, valor, descricao (ex: Prova, Trabalho), bimestre
-- ADICIONAR ALUNO: precisa nome completo, turma, escola. Não precisa ID (é gerado automático).
+- ADICIONAR ALUNO: precisa nome completo, turma, e escola (use o nome exato da lista acima). Não precisa ID (é gerado automático). Se o usuário não disser a escola, PERGUNTE.
 - FALTAS: precisa nome, turma, data (padrão ${hoje})
 - LISTAR: type="resposta" com acao listar_alunos + turma (opcional)
 - SORTEAR: type="resposta" com acao sortear_aluno + turma (opcional)

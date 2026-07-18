@@ -81,7 +81,7 @@ export default function Pati() {
       const res = await fetch("/api/pati", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mensagem: texto, historico, alunos, escola, grade, acoesPendentes: contextoAcoes }),
+        body: JSON.stringify({ mensagem: texto, historico, alunos, escola, grade, acoesPendentes: contextoAcoes, todasEscolas: escolas.map((e: any) => e.nome) }),
       })
       const data = await res.json()
       const acoes = extrairAcoes(data)
@@ -100,19 +100,6 @@ export default function Pati() {
     } finally {
       setLoading(false)
     }
-  }
-
-  async function mudarEscola(escolaId: string) {
-    const e = escolas.find(x => x.id === escolaId)
-    if (!e) return
-    setEscola(e)
-    setMessages(prev => [...prev, { role: "assistant", content: `🏫 Escola alterada para ${e.nome}` }])
-    try {
-      const g = await getGrade(e.id)
-      if (g) setGrade(g)
-      const { data } = await supabase.from("alunos").select("id, nome, turma_nome").order("nome")
-      if (data) setAlunos(data)
-    } catch {}
   }
 
   async function confirmarAcao() {
@@ -204,6 +191,10 @@ export default function Pati() {
           if (!escolaId) {
             linhas.push("⚠️ Escola não encontrada.")
             continue
+          }
+          if (escolaId !== escola?.id) {
+            const e = escolas.find((x: any) => x.id === escolaId)
+            if (e) setEscola(e)
           }
           await criarAluno({ nome: acao.nome, turma_nome: acao.turma, escola_id: escolaId })
           const alunosAtualizados = await import("@/services/alunos").then(m => m.getAlunos(escola.id))
@@ -436,16 +427,13 @@ export default function Pati() {
 
   return (
     <div className="flex h-[calc(100vh-12rem)] flex-col animate-fade-in">
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-4">
+        <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900">🤖 Pati</h1>
-          <select value={escola?.id || ""} onChange={e => mudarEscola(e.target.value)}
-            className="select text-sm max-w-[140px]">
-            {escolas.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
-          </select>
+          <p className="mt-1.5 text-sm text-zinc-500">Lançar notas, faltas, lista, sorteio e horários</p>
         </div>
         <div className="flex items-center gap-3">
-          {escola && <span className="text-xs text-zinc-400">🏫 {escola.nome}</span>}
+          {escola && <span className="badge badge-teal">{escola.nome}</span>}
           <span className="badge badge-emerald animate-pulse">online</span>
         </div>
       </div>
