@@ -5,6 +5,7 @@ import Link from "next/link"
 import { getEscolas } from "@/services/escolas"
 import { getAlunosDaTurma } from "@/services/alunos"
 import { getFaltas, salvarFalta, marcarTodosPresentes } from "@/services/faltas"
+import { getTurmasDaEscola } from "@/services/turmas"
 import type { AlunoBasico } from "@/services/alunos"
 
 type FaltasMap = Record<string, boolean>
@@ -15,6 +16,7 @@ export default function Faltas() {
   const [escolaId, setEscolaId] = useState("")
   const [escolaNome, setEscolaNome] = useState("")
   const [turma, setTurma] = useState("")
+  const [turmasDisponiveis, setTurmasDisponiveis] = useState<string[]>([])
   const [data, setData] = useState(new Date().toISOString().split("T")[0])
   const [faltas, setFaltas] = useState<FaltasMap>({})
   const [salvo, setSalvo] = useState(false)
@@ -33,9 +35,15 @@ export default function Faltas() {
     if (e) setEscolaNome(e.nome)
     setTurma("")
     setAlunos([])
-    getAlunosDaTurma(escolaId, "").then(data => {
-      setAlunos(data)
-    }).catch(e => setErro("Erro ao carregar alunos"))
+    setTurmasDisponiveis([])
+    Promise.all([
+      getAlunosDaTurma(escolaId, ""),
+      getTurmasDaEscola(escolaId),
+    ]).then(([alunosData, turmasData]) => {
+      setAlunos(alunosData)
+      const nomes = turmasData.map(t => t.nome)
+      setTurmasDisponiveis(nomes)
+    }).catch(e => setErro("Erro ao carregar dados"))
   }, [escolaId])
 
   useEffect(() => {
@@ -128,7 +136,9 @@ export default function Faltas() {
     win?.print()
   }
 
-  const turmasUnicas = [...new Set(alunos.map(a => a.turma_nome))].sort()
+  const turmasUnicas = turmasDisponiveis.length
+    ? turmasDisponiveis.sort()
+    : [...new Set(alunos.map(a => a.turma_nome))].sort()
   const alunosFiltrados = turma ? alunos.filter(a => a.turma_nome === turma) : alunos
 
   return (

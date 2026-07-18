@@ -5,6 +5,7 @@ import Link from "next/link"
 import { getEscolas } from "@/services/escolas"
 import { getAlunosDaTurma } from "@/services/alunos"
 import { getNotas, salvarNota } from "@/services/notas"
+import { getTurmasDaEscola } from "@/services/turmas"
 import type { AlunoBasico } from "@/services/alunos"
 
 type Nota = { id: string; aluno_id: string; disciplina: string; valor: string; descricao: string; bimestre: number }
@@ -14,6 +15,7 @@ export default function Notas() {
   const [escolas, setEscolas] = useState<{ id: string; nome: string }[]>([])
   const [escolaId, setEscolaId] = useState("")
   const [turma, setTurma] = useState("")
+  const [turmasDisponiveis, setTurmasDisponiveis] = useState<string[]>([])
   const [disciplina, setDisciplina] = useState("Química")
   const [bimestre, setBimestre] = useState(1)
   const [notas, setNotas] = useState<Record<string, string>>({})
@@ -34,9 +36,14 @@ export default function Notas() {
     if (!escolaId) return
     setTurma("")
     setAlunos([])
-    getAlunosDaTurma(escolaId, "").then(data => {
-      setAlunos(data)
-    }).catch(e => setErro("Erro ao carregar alunos"))
+    setTurmasDisponiveis([])
+    Promise.all([
+      getAlunosDaTurma(escolaId, ""),
+      getTurmasDaEscola(escolaId),
+    ]).then(([alunosData, turmasData]) => {
+      setAlunos(alunosData)
+      setTurmasDisponiveis(turmasData.map(t => t.nome))
+    }).catch(e => setErro("Erro ao carregar dados"))
   }, [escolaId])
 
   useEffect(() => {
@@ -83,7 +90,9 @@ export default function Notas() {
     }
   }
 
-  const turmasUnicas = [...new Set(alunos.map(a => a.turma_nome))].sort()
+  const turmasUnicas = turmasDisponiveis.length
+    ? turmasDisponiveis.sort()
+    : [...new Set(alunos.map(a => a.turma_nome))].sort()
 
   return (
     <div className="space-y-6 animate-fade-in">
