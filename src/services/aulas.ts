@@ -1,7 +1,7 @@
 "use client"
 
 import { supabase } from "@/lib/supabase"
-import { safeQuery } from "./supabase"
+import { safeQuery, safeMutate } from "./supabase"
 
 export type AulaResumo = { id: string; topico: string; created_at: string }
 
@@ -23,13 +23,13 @@ export async function getAula(id: string): Promise<AulaCompleta | null> {
 }
 
 export async function atualizarAula(id: string, dados: { resumo_md?: string; exercicios_md?: string; avaliacao_md?: string; topico?: string }) {
-  return safeQuery(() =>
-    supabase.from("aulas").update(dados).eq("id", id)
+  return safeMutate(() =>
+    supabase.from("aulas").update(dados).eq("id", id).select()
   )
 }
 
 export async function removerAula(id: string) {
-  return safeQuery(() =>
+  return safeMutate(() =>
     supabase.from("aulas").delete().eq("id", id)
   )
 }

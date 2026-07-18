@@ -47,7 +47,7 @@ export default function Dashboard() {
       await removerAula(id)
       setConfirmDelete(null)
       await load()
-    } catch { alert("Erro ao excluir aula") }
+    } catch (e: any) { console.error("Erro ao excluir aula:", e); alert(e?.message || "Erro ao excluir aula") }
     setDeleting(false)
   }
 

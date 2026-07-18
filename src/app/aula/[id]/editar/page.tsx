@@ -37,7 +37,7 @@ export default function EditarAulaPage({ params }: Props) {
       await atualizarAula(id, form)
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    } catch { setError("Erro ao salvar") }
+    } catch (e: any) { console.error("Erro ao salvar aula:", e); setError(e?.message || "Erro ao salvar") }
     setSaving(false)
   }
 
