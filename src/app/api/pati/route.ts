@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getGeminiModel, rebaixarModelo } from '@/lib/gemini'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
 const MODEL = "llama-3.3-70b-versatile"
@@ -94,6 +95,10 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
     { role: "user", content: mensagem },
   ]
 
+  // Try Groq first, fall back to Gemini on failure
+  let content = ""
+  let usadoGemini = false
+
   try {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -109,20 +114,46 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
     }
 
     const data = await res.json()
-    const content = data.choices?.[0]?.message?.content || ""
-
-    const parsed = extrairJson(content)
-    if (parsed) {
-      return NextResponse.json({
-        ...parsed,
-        mensagem: parsed.mensagem || (parsed.type === "executar" ? "Pronto!" : "Como posso ajudar?"),
-      })
+    content = data.choices?.[0]?.message?.content || ""
+  } catch (groqErr: any) {
+    console.warn("Groq falhou, tentando Gemini:", groqErr.message)
+    try {
+      const model = getGeminiModel()
+      if (model) {
+        const geminiMessages = messages.map(m => ({
+          role: m.role === "system" ? "user" : m.role,
+          parts: [{ text: m.content }],
+        }))
+        // Prepend system prompt as first user message with instruction
+        if (messages[0]?.role === "system") {
+          geminiMessages[0] = {
+            role: "user",
+            parts: [{ text: `INSTRUÇÃO: ${messages[0].content}\n\nLEMBRE-SE: responda APENAS JSON válido, sem markdown.` }],
+          }
+        }
+        const result = await model.generateContent({ contents: geminiMessages })
+        content = result.response?.text() || ""
+        usadoGemini = true
+      } else {
+        throw new Error("Sem API key do Gemini")
+      }
+    } catch (gemErr: any) {
+      if (gemErr.message?.includes("429") || gemErr.status === 429 || gemErr.message?.includes("quota")) {
+        rebaixarModelo()
+      }
+      return NextResponse.json({ type: "erro", mensagem: `Erro: ${groqErr.message}${gemErr.message ? " (Gemini também falhou)" : ""}` })
     }
-
-    return NextResponse.json({ type: "pergunta", mensagem: "Não consegui processar. Pode reformular de outro jeito?" })
-  } catch (err: any) {
-    return NextResponse.json({ type: "erro", mensagem: `Erro: ${err.message}` })
   }
+
+  const parsed = extrairJson(content)
+  if (parsed) {
+    return NextResponse.json({
+      ...parsed,
+      mensagem: parsed.mensagem || (parsed.type === "executar" ? "Pronto!" : "Como posso ajudar?"),
+    })
+  }
+
+  return NextResponse.json({ type: "pergunta", mensagem: "Não consegui processar. Pode reformular de outro jeito?" })
 }
 
 function extrairJson(texto: string): any {
