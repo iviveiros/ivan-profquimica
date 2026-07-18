@@ -32,8 +32,10 @@ export default function Notas() {
 
   useEffect(() => {
     if (!escolaId) return
+    setTurma("")
+    setAlunos([])
     getAlunosDaTurma(escolaId, "").then(data => {
-      if (data.length) setAlunos(data)
+      setAlunos(data)
     }).catch(e => setErro("Erro ao carregar alunos"))
   }, [escolaId])
 
@@ -46,8 +48,8 @@ export default function Notas() {
     setErro("")
     try {
       const alunosTurma = await getAlunosDaTurma(escolaId, turma)
-      if (!alunosTurma.length) return
       setAlunos(alunosTurma)
+      if (!alunosTurma.length) return
       const ids = alunosTurma.map(a => a.id)
       const registros = await getNotas(ids, disciplina, bimestre)
       const mapV: Record<string, string> = {}

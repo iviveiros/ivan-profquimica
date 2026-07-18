@@ -31,15 +31,18 @@ export default function Faltas() {
     if (!escolaId) return
     const e = escolas.find(x => x.id === escolaId)
     if (e) setEscolaNome(e.nome)
+    setTurma("")
+    setAlunos([])
     getAlunosDaTurma(escolaId, "").then(data => {
-      if (data.length) setAlunos(data)
+      setAlunos(data)
     }).catch(e => setErro("Erro ao carregar alunos"))
   }, [escolaId])
 
   useEffect(() => {
-    if (!turma || !data) return
+    if (!turma || !data || !escolaId) return
     getAlunosDaTurma(escolaId, turma).then(data => {
-      if (data.length) { setAlunos(data); carregarFaltas(data) }
+      setAlunos(data)
+      carregarFaltas(data)
     }).catch(e => setErro("Erro ao carregar alunos da turma"))
   }, [turma, data])
 
