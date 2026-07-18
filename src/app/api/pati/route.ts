@@ -67,6 +67,7 @@ CONTEXTO:
 REGRAS:
 - Se nome incompleto → peça nome completo E turma
 - NOTAS: precisa nome, turma, valor, descricao (ex: Prova, Trabalho), bimestre
+- ADICIONAR ALUNO: precisa nome completo, turma, escola. Não precisa ID (é gerado automático).
 - FALTAS: precisa nome, turma, data (padrão ${hoje})
 - LISTAR: type="resposta" com acao listar_alunos + turma (opcional)
 - SORTEAR: type="resposta" com acao sortear_aluno + turma (opcional)
@@ -81,7 +82,7 @@ REGRAS:
 - Usuário confirmar → type="executar" com mesmas acoes
 
 RESPONDA APENAS ESTE JSON (sem markdown, sem texto extra):
-{"type":"pergunta"|"confirmacao"|"executar"|"resposta","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"},{"tipo":"listar_alunos","turma":"TURMA"},{"tipo":"sortear_aluno","turma":"TURMA"},{"tipo":"consultar_horarios","dia":"segunda|terca|quarta|quinta|sexta","proxima":true},{"tipo":"adicionar_aula","dia":"segunda","inicio":"07:10","fim":"08:00","materia":"Quimica","turma":"9 Ano A"},{"tipo":"editar_aula","dia":"terca","indice":2,"materia":"Quimica"},{"tipo":"remover_aula","dia":"quinta","indice":0}]}
+{"type":"pergunta"|"confirmacao"|"executar"|"resposta","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"},{"tipo":"listar_alunos","turma":"TURMA"},{"tipo":"sortear_aluno","turma":"TURMA"},{"tipo":"consultar_horarios","dia":"segunda|terca|quarta|quinta|sexta","proxima":true},{"tipo":"adicionar_aluno","nome":"NOME COMPLETO","turma":"TURMA"},{"tipo":"adicionar_aula","dia":"segunda","inicio":"07:10","fim":"08:00","materia":"Quimica","turma":"9 Ano A"},{"tipo":"editar_aula","dia":"terca","indice":2,"materia":"Quimica"},{"tipo":"remover_aula","dia":"quinta","indice":0}]}
 
 IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
 

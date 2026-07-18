@@ -5,6 +5,7 @@ import { getEscolas } from "@/services/escolas"
 import { getGrade, salvarGrade } from "@/services/horarios"
 import type { Grade } from "@/services/horarios"
 import { supabase } from "@/lib/supabase"
+import { criarAluno } from "@/services/alunos"
 
 type Message = {
   role: "user" | "assistant"
@@ -135,6 +136,7 @@ export default function Pati() {
     if (a.valor !== undefined && typeof a.valor === "number") {
       a.valor = String(a.valor)
     }
+    if (!a.tipo && a.nome && a.turma) a.tipo = "adicionar_aluno"
     if (!a.tipo && (a.valor || a.nota)) a.tipo = "lancar_nota"
     if (!a.tipo && a.alunos?.length) a.tipo = "marcar_falta"
     return a
@@ -178,6 +180,15 @@ export default function Pati() {
             await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: true })
             linhas.push(`✅ Presença: ${aluno.nome} (${data})`)
           }
+        } else if (acao.tipo === "adicionar_aluno") {
+          if (!escola?.id) {
+            linhas.push("⚠️ Nenhuma escola selecionada.")
+            continue
+          }
+          await criarAluno({ nome: acao.nome, turma_nome: acao.turma, escola_id: escola.id })
+          const alunosAtualizados = await import("@/services/alunos").then(m => m.getAlunos(escola.id))
+          setAlunos(alunosAtualizados)
+          linhas.push(`✅ Aluno adicionado: ${acao.nome} (${acao.turma})`)
         } else if (acao.tipo === "adicionar_aula") {
           if (!grade || !escola?.id) {
             linhas.push("Nenhuma escola carregada.")
@@ -395,6 +406,7 @@ export default function Pati() {
       if (a.tipo === "listar_alunos") return `📋 Listar alunos${a.turma ? ` da turma ${a.turma}` : ""}`
       if (a.tipo === "sortear_aluno") return `🎲 Sortear aluno${a.turma ? ` da turma ${a.turma}` : ""}`
       if (a.tipo === "consultar_horarios") return `📅 Consultar horários${a.dia ? ` de ${a.dia}` : ""}`
+      if (a.tipo === "adicionar_aluno") return `👤 Adicionar aluno: ${a.nome} (${a.turma})`
       if (a.tipo === "adicionar_aula") return `➕ Adicionar aula: ${a.materia} - ${a.turma} (${a.dia}, ${a.inicio}-${a.fim})`
       if (a.tipo === "editar_aula") return `✏️ Editar aula ${a.indice + 1} de ${a.dia}`
       if (a.tipo === "remover_aula") return `🗑️ Remover aula ${a.indice + 1} de ${a.dia}`
@@ -432,6 +444,7 @@ export default function Pati() {
                         {a.tipo === "listar_alunos" && <>📋 Listar alunos{a.turma ? ` (${a.turma})` : ""}</>}
                         {a.tipo === "sortear_aluno" && <>🎲 Sortear aluno{a.turma ? ` (${a.turma})` : ""}</>}
                         {a.tipo === "consultar_horarios" && <>📅 Horários{a.dia ? ` (${a.dia})` : ""}</>}
+                        {a.tipo === "adicionar_aluno" && <>👤 Adicionar aluno: {a.nome} ({a.turma})</>}
                         {a.tipo === "adicionar_aula" && <>➕ Adicionar: {a.materia} - {a.turma} ({a.dia} {a.inicio}-{a.fim})</>}
                         {a.tipo === "editar_aula" && <>✏️ Editar aula {a.indice + 1} de {a.dia}</>}
                         {a.tipo === "remover_aula" && <>🗑️ Remover aula {a.indice + 1} de {a.dia}</>}
