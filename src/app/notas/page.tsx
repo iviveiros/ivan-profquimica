@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { getEscolas } from "@/services/escolas"
-import { getAlunosDaTurma } from "@/services/alunos"
+import { getAlunosDaTurma, atualizarAluno, removerAlunoCompleto } from "@/services/alunos"
 import { getNotas, salvarNota } from "@/services/notas"
 import { getTurmasDaEscola } from "@/services/turmas"
 import type { AlunoBasico } from "@/services/alunos"
@@ -24,6 +24,10 @@ export default function Notas() {
   const [editValor, setEditValor] = useState("")
   const [editDesc, setEditDesc] = useState("")
   const [salvo, setSalvo] = useState(false)
+  const [editarAluno, setEditarAluno] = useState<AlunoBasico | null>(null)
+  const [editNome, setEditNome] = useState("")
+  const [editTurma, setEditTurma] = useState("")
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [erro, setErro] = useState("")
 
   useEffect(() => {
@@ -154,8 +158,10 @@ export default function Notas() {
                     <span className="text-xs text-zinc-300 italic">sem nota</span>
                   )}
                   <button onClick={() => iniciarEdicao(a.id, notas[a.id] || "", descricoes[a.id] || "")} className="btn btn-secondary btn-sm">
-                    {notas[a.id] !== undefined ? "Editar" : "Lançar"}
+                    {notas[a.id] !== undefined ? "Nota" : "Lançar"}
                   </button>
+                  <button onClick={() => { setEditarAluno(a); setEditNome(a.nome); setEditTurma(a.turma_nome) }} className="btn btn-ghost btn-sm px-1.5" title="Editar aluno">✏️</button>
+                  <button onClick={() => setDeleteConfirmId(a.id)} className="btn btn-ghost btn-sm px-1.5 text-red-400 hover:text-red-600" title="Remover aluno">🗑️</button>
                 </div>
               </div>
             ))}
@@ -166,7 +172,7 @@ export default function Notas() {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Note Modal */}
       {editAluno && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setEditAluno(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
@@ -188,6 +194,62 @@ export default function Notas() {
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={() => setEditAluno(null)} className="btn btn-ghost btn-sm">Cancelar</button>
               <button onClick={salvarNotaHandler} className="btn btn-primary btn-sm">Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {editarAluno && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setEditarAluno(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <h3 className="mb-4 text-lg font-bold text-zinc-800">✏️ Editar — {editarAluno.nome}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-zinc-500">Nome completo</label>
+                <input type="text" value={editNome} onChange={e => setEditNome(e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-zinc-500">Turma</label>
+                <select value={editTurma} onChange={e => setEditTurma(e.target.value)} className="select">
+                  {turmasUnicas.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setEditarAluno(null)} className="btn btn-ghost btn-sm">Cancelar</button>
+              <button onClick={async () => {
+                if (!editarAluno) return
+                await atualizarAluno(editarAluno.id, { nome: editNome, turma_nome: editTurma })
+                setAlunos(prev => prev.map(a => a.id === editarAluno.id ? { ...a, nome: editNome, turma_nome: editTurma } : a))
+                setEditarAluno(null)
+                setSalvo(true)
+                setTimeout(() => setSalvo(false), 2000)
+              }} className="btn btn-primary btn-sm">Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+            <h3 className="mb-2 text-lg font-bold text-red-600">🗑️ Remover aluno</h3>
+            <p className="text-sm text-zinc-600">
+              Tem certeza? O aluno será removido de <strong>todas</strong> as listas, notas e chamadas.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setDeleteConfirmId(null)} className="btn btn-ghost btn-sm">Cancelar</button>
+              <button onClick={async () => {
+                await removerAlunoCompleto(deleteConfirmId)
+                setAlunos(prev => prev.filter(a => a.id !== deleteConfirmId))
+                setNotas(prev => { const n = { ...prev }; delete n[deleteConfirmId]; return n })
+                setDescricoes(prev => { const n = { ...prev }; delete n[deleteConfirmId]; return n })
+                setDeleteConfirmId(null)
+                setSalvo(true)
+                setTimeout(() => setSalvo(false), 2000)
+              }} className="btn btn-danger btn-sm">Remover</button>
             </div>
           </div>
         </div>

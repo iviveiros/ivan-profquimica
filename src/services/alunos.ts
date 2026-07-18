@@ -44,6 +44,12 @@ export async function removerAluno(id: string): Promise<void> {
   await safeMutate(() => supabase.from("alunos").delete().eq("id", id))
 }
 
+export async function removerAlunoCompleto(id: string): Promise<void> {
+  await safeMutate(() => supabase.from("notas").delete().eq("aluno_id", id))
+  await safeMutate(() => supabase.from("faltas").delete().eq("aluno_id", id))
+  await safeMutate(() => supabase.from("alunos").delete().eq("id", id))
+}
+
 export async function importarAlunos(dados: { nome: string; turma_nome: string; escola_id: string }[]): Promise<void> {
   await safeMutate(() => supabase.from("alunos").insert(dados))
 }
