@@ -129,14 +129,19 @@ export default function AtualizarHorario() {
     ;(async () => {
       try {
         setStatus("Buscando escola OBJETIVO...")
-        const { data: todas, error } = await supabase.from("escolas").select("id, nome")
-        if (error) { setErro(error.message); return }
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        const res = await fetch(`${url}/rest/v1/escolas?select=id,nome`, {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+        })
+        if (!res.ok) { setErro(`HTTP ${res.status}: ${await res.text().catch(() => "sem resposta")}`); return }
+        const todas = await res.json()
         const escolas = (todas || []).filter((e: any) => e.nome.toUpperCase().includes("OBJETIVO"))
         if (!escolas.length) { setErro(`Escola OBJETIVO não encontrada. Escolas: ${(todas||[]).map((e:any)=>e.nome).join(", ")}`); return }
         const id = escolas[0].id
         setEscolaId(id)
         setStatus(`Escola encontrada: ${escolas[0].nome}`)
-      } catch (e: any) { setErro(e.message) }
+      } catch (e: any) { setErro(`Erro: ${e.message}`) }
     })()
   }, [])
 
@@ -145,8 +150,14 @@ export default function AtualizarHorario() {
     setStatus("Atualizando grade...")
     setErro("")
     try {
-      const { error } = await supabase.from("escolas").update({ grade: GRADE }).eq("id", escolaId)
-      if (error) throw error
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      const res = await fetch(`${url}/rest/v1/escolas?id=eq.${escolaId}`, {
+        method: "PATCH",
+        headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ grade: GRADE }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const total = Object.values(GRADE).flat().length
       setStatus(`✅ Grade atualizada com ${total} horários! Verifique a aba Horários.`)
     } catch (e: any) { setErro(e.message); setStatus("❌ Erro") }
