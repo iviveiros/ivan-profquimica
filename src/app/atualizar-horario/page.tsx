@@ -129,8 +129,10 @@ export default function AtualizarHorario() {
     ;(async () => {
       try {
         setStatus("Buscando escola OBJETIVO...")
-        const { data: escolas, error } = await supabase.from("escolas").select("id, nome, grade").ilike("nome", "%objetivo%")
-        if (error || !escolas?.length) { setErro("Escola não encontrada"); return }
+        const { data: todas, error } = await supabase.from("escolas").select("id, nome")
+        if (error) { setErro(error.message); return }
+        const escolas = (todas || []).filter((e: any) => e.nome.toUpperCase().includes("OBJETIVO"))
+        if (!escolas.length) { setErro(`Escola OBJETIVO não encontrada. Escolas: ${(todas||[]).map((e:any)=>e.nome).join(", ")}`); return }
         const id = escolas[0].id
         setEscolaId(id)
         setStatus(`Escola encontrada: ${escolas[0].nome}`)
