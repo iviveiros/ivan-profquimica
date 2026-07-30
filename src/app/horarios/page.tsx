@@ -286,8 +286,8 @@ export default function Horarios() {
                               <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{item.aula.turma}</p>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-bold text-zinc-500">{item.aula.materia}</span>
-                              <span className="text-[11px] font-bold text-zinc-500">• {item.aula.inicio}–{item.aula.fim}</span>
+                              <span className="text-sm font-bold text-zinc-700">{item.aula.materia}</span>
+                              <span className="text-xs font-bold text-zinc-700">• {item.aula.inicio}–{item.aula.fim}</span>
                             </div>
                           </div>
                         </div>
@@ -317,8 +317,8 @@ export default function Horarios() {
                               <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{a.turma}</p>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-bold text-zinc-500">{a.materia}</span>
-                              <span className="text-[11px] font-bold text-zinc-500">• {a.inicio}–{a.fim}</span>
+                              <span className="text-xs font-bold text-zinc-700">{a.materia}</span>
+                              <span className="text-[13px] font-bold text-zinc-700">• {a.inicio}–{a.fim}</span>
                             </div>
                           </div>
                           {editando && (
