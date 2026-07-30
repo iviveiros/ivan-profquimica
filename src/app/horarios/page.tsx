@@ -277,8 +277,8 @@ export default function Horarios() {
                           <div className={`rounded-t-xl px-3 py-1 text-[11px] font-extrabold tracking-wider uppercase border-b ${escolaCor}`}>
                             {item.escola === "IEFA" ? "🏫 IEFA" : "🏫 OBJETIVO"}
                           </div>
-                          <div className="absolute top-1 -right-2 rounded-full bg-white border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-500 shadow-sm">
-                            {item.aula.inicio}
+                          <div className="absolute top-1 -right-2 rounded-full bg-zinc-800 border border-zinc-700 px-2 py-0.5 text-[11px] font-bold text-white shadow-md">
+                            {item.aula.inicio}–{item.aula.fim}
                           </div>
                           <div className="p-3 pt-2">
                             <div className="flex items-center gap-2">
@@ -286,8 +286,8 @@ export default function Horarios() {
                               <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{item.aula.turma}</p>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-semibold text-zinc-400">{item.aula.materia}</span>
-                              <span className="text-[10px] font-mono text-zinc-300">• {item.aula.inicio}–{item.aula.fim}</span>
+                              <span className="text-xs font-bold text-zinc-500">{item.aula.materia}</span>
+                              <span className="text-[11px] font-bold text-zinc-500">• {item.aula.inicio}–{item.aula.fim}</span>
                             </div>
                           </div>
                         </div>
@@ -308,8 +308,8 @@ export default function Horarios() {
                         <div key={idx}
                           className={`group relative rounded-xl border ${cores.bg} ${cores.border} ${editando ? "cursor-pointer hover:shadow-md active:scale-[0.98]" : "cursor-default"} transition-all duration-150`}
                           onClick={() => editando && abrirEdicao(dia.key, idx, a)}>
-                          <div className="absolute -top-2 -right-2 rounded-full bg-white border border-zinc-200 px-1.5 py-0.5 text-[10px] font-mono font-bold text-zinc-500 shadow-sm">
-                            {a.inicio}
+                          <div className="absolute -top-2 -right-2 rounded-full bg-zinc-800 border border-zinc-700 px-2 py-0.5 text-[11px] font-bold text-white shadow-md">
+                            {a.inicio}–{a.fim}
                           </div>
                           <div className="p-3">
                             <div className="flex items-center gap-2">
@@ -317,8 +317,8 @@ export default function Horarios() {
                               <p className={`text-base font-extrabold tracking-tight leading-tight ${cores.text}`}>{a.turma}</p>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-semibold text-zinc-400">{a.materia}</span>
-                              <span className="text-[10px] font-mono text-zinc-300">• {a.inicio}–{a.fim}</span>
+                              <span className="text-xs font-bold text-zinc-500">{a.materia}</span>
+                              <span className="text-[11px] font-bold text-zinc-500">• {a.inicio}–{a.fim}</span>
                             </div>
                           </div>
                           {editando && (

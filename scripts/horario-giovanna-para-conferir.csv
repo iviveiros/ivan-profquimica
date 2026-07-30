@@ -1,0 +1,83 @@
+Dia,Horário,Turma,Matéria,Professor,Aula sua?
+Segunda-feira,07:10-08:00,1ª Série A,Química 1,WALLISON,Não
+Segunda-feira,08:00-08:50,1ª Série B,Química 1,WALLISON,Não
+Segunda-feira,09:00-09:50,2ª Série A,Química 2,GIOVANNA,Sim
+Segunda-feira,09:50-10:40,2ª Série B,Química 2,GIOVANNA,Sim
+Segunda-feira,10:50-11:40,3ª Série A,Química 2,GIOVANNA,Sim
+Segunda-feira,11:40-12:30,3ª Série B,Química 2,GIOVANNA,Sim
+Segunda-feira,12:30-13:20,3ª Série A,Matemática 1,AMANDA,Não
+Segunda-feira,12:30-13:20,3ª Série B,LP - MAYLON - O.L,MAYLON,Não
+Terça-feira,07:10-08:00,1ª Série A,Biologia,PEDRÃO,Não
+Terça-feira,07:10-08:00,2ª Série A,Matemática,Alexandre,Não
+Terça-feira,07:10-08:00,3ª Série A,LP - FADEL,FADEL,Não
+Terça-feira,07:10-08:00,3ª Série B,Química 2,GIOVANNA,Sim
+Terça-feira,08:00-08:50,1ª Série A,Filosofia,LEONIDES,Não
+Terça-feira,08:00-08:50,1ª Série B,Biologia,PEDRÃO,Não
+Terça-feira,08:00-08:50,2ª Série A,Geografia,MAURICIO,Não
+Terça-feira,08:00-08:50,2ª Série B,LP - FADEL,FADEL,Não
+Terça-feira,08:00-08:50,3ª Série A,Matemática,Alexandre,Não
+Terça-feira,08:00-08:50,3ª Série A,Geografia,BRUNO,Não
+Terça-feira,08:00-08:50,3ª Série B,Geografia,BRUNO,Não
+Terça-feira,08:00-08:50,3ª Série B,LP - FADEL,FADEL,Não
+Terça-feira,09:00-09:50,1ª Série A,Química 2,GIOVANNA,Sim
+Terça-feira,09:00-09:50,1ª Série B,Filosofia,LEONIDES,Não
+Terça-feira,09:00-09:50,2ª Série A,Biologia,PEDRÃO,Não
+Terça-feira,09:00-09:50,2ª Série B,Matemática,Alexandre,Não
+Terça-feira,09:00-09:50,3ª Série A,(vazio),,Não
+Terça-feira,09:00-09:50,3ª Série B,Filosofia,LEONIDES,Não
+Terça-feira,09:50-10:40,1ª Série A,Geografia,MAURICIO,Não
+Terça-feira,09:50-10:40,1ª Série B,Matemática,Alexandre,Não
+Terça-feira,09:50-10:40,2ª Série A,Língua Inglesa,FADEL,Não
+Terça-feira,09:50-10:40,2ª Série B,Biologia,PEDRÃO,Não
+Terça-feira,09:50-10:40,3ª Série A,Química 2,GIOVANNA,Sim
+Terça-feira,09:50-10:40,3ª Série B,Filosofia,LEONIDES,Não
+Terça-feira,10:50-11:40,1ª Série A,Matemática,Alexandre,Não
+Terça-feira,10:50-11:40,1ª Série B,LP - FADEL,FADEL,Não
+Terça-feira,10:50-11:40,2ª Série A,História,MARTINELI,Não
+Terça-feira,10:50-11:40,2ª Série B,Geografia,MAURICIO,Não
+Terça-feira,10:50-11:40,3ª Série A,Filosofia,LEONIDES,Não
+Terça-feira,10:50-11:40,3ª Série B,Biologia,PEDRÃO,Não
+Terça-feira,11:40-12:30,1ª Série A,Arte,WANDERLEY,Não
+Terça-feira,11:40-12:30,1ª Série B,Química 2,GIOVANNA,Sim
+Terça-feira,11:40-12:30,2ª Série A,LP - FADEL,FADEL,Não
+Terça-feira,11:40-12:30,2ª Série B,História,MARTINELI,Não
+Terça-feira,11:40-12:30,3ª Série A,Biologia,PEDRÃO,Não
+Terça-feira,11:40-12:30,3ª Série B,Matemática,Alexandre,Não
+Terça-feira,12:30-13:20,3ª Série A,LP - MAYLON - O.L,MAYLON,Não
+Terça-feira,12:30-13:20,3ª Série B,Matemática 1,AMANDA,Não
+Quarta-feira,Nenhuma aula de Química da GIOVANNA,,,,
+Quinta-feira,Nenhuma aula de Química da GIOVANNA,,,,
+Sexta-feira,07:10-08:00,1ª Série A,LP - ELIENE,ELIENE,Não
+Sexta-feira,07:10-08:00,2ª Série A,Geografia,MAURICIO,Não
+Sexta-feira,07:10-08:00,3ª Série A,Química 2,GIOVANNA,Sim
+Sexta-feira,07:10-08:00,3ª Série B,Química 1,WALLISON,Não
+Sexta-feira,08:00-08:50,1ª Série A,LP - FADEL,FADEL,Não
+Sexta-feira,08:00-08:50,1ª Série B,História,BRUNO,Não
+Sexta-feira,08:00-08:50,2ª Série A,Matemática,Alexandre,Não
+Sexta-feira,08:00-08:50,2ª Série B,Geografia,MAURICIO,Não
+Sexta-feira,08:00-08:50,3ª Série A,Química 1,WALLISON,Não
+Sexta-feira,08:00-08:50,3ª Série B,Química 2,GIOVANNA,Sim
+Sexta-feira,09:00-09:50,1ª Série A,Química 1,WALLISON,Não
+Sexta-feira,09:00-09:50,1ª Série B,Matemática,Alexandre,Não
+Sexta-feira,09:00-09:50,2ª Série A,LP - FADEL,FADEL,Não
+Sexta-feira,09:00-09:50,2ª Série B,Química 2,GIOVANNA,Sim
+Sexta-feira,09:00-09:50,3ª Série A,Matemática 1,AMANDA,Não
+Sexta-feira,09:00-09:50,3ª Série B,Geografia,MAURICIO,Não
+Sexta-feira,09:50-10:40,1ª Série A,Matemática,Alexandre,Não
+Sexta-feira,09:50-10:40,1ª Série B,Química 1,WALLISON,Não
+Sexta-feira,09:50-10:40,2ª Série A,Química 2,GIOVANNA,Sim
+Sexta-feira,09:50-10:40,2ª Série B,LP - FADEL,FADEL,Não
+Sexta-feira,09:50-10:40,3ª Série A,História,MARTINELI,Não
+Sexta-feira,09:50-10:40,3ª Série B,Matemática 1,AMANDA,Não
+Sexta-feira,10:50-11:40,1ª Série A,Matemática 1,AMANDA,Não
+Sexta-feira,10:50-11:40,1ª Série B,Química 2,GIOVANNA,Sim
+Sexta-feira,10:50-11:40,2ª Série A,Filosofia,LEONIDES,Não
+Sexta-feira,10:50-11:40,2ª Série B,Química 1,WALLISON,Não
+Sexta-feira,10:50-11:40,3ª Série A,Matemática,Alexandre,Não
+Sexta-feira,10:50-11:40,3ª Série B,História,MARTINELI,Não
+Sexta-feira,11:40-12:30,1ª Série A,Química 2,GIOVANNA,Sim
+Sexta-feira,11:40-12:30,1ª Série B,Matemática 1,AMANDA,Não
+Sexta-feira,11:40-12:30,2ª Série A,Química 1,WALLISON,Não
+Sexta-feira,11:40-12:30,2ª Série B,História,MARTINELI,Não
+Sexta-feira,11:40-12:30,3ª Série A,Geografia,MAURICIO,Não
+Sexta-feira,11:40-12:30,3ª Série B,Matemática,Alexandre,Não
