@@ -151,38 +151,35 @@ export default function Pati() {
       acao = normalizarAcao(acao)
       if (!acao.tipo) continue
       try {
-        if (acao.tipo === "lancar_nota") {
-          if (!acao.aluno_id) {
-            linhas.push(`⚠️ Aluno não encontrado: ${acao.aluno_nome || "desconhecido"}`)
-            continue
-          }
-          await supabase.from("notas").delete().eq("aluno_id", acao.aluno_id).eq("disciplina", acao.disciplina || "Química").eq("bimestre", acao.bimestre || 1)
-          await supabase.from("notas").insert({
-            aluno_id: acao.aluno_id,
-            disciplina: acao.disciplina || "Química",
-            valor: acao.valor,
-            descricao: acao.descricao || "",
-            bimestre: acao.bimestre || 1,
-          })
-          linhas.push(`📝 ${acao.aluno_nome}: ${acao.valor}`)
-        } else if (acao.tipo === "marcar_falta" && acao.alunos) {
-          for (const aluno of acao.alunos) {
-            const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
-            if (!alunoId) continue
-            const data = acao.data || new Date().toISOString().split("T")[0]
-            await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
-            await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: false })
-            linhas.push(`❌ Falta: ${aluno.nome} (${data})`)
-          }
-        } else if (acao.tipo === "marcar_presenca" && acao.alunos) {
-          for (const aluno of acao.alunos) {
-            const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
-            if (!alunoId) continue
-            const data = acao.data || new Date().toISOString().split("T")[0]
-            await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
-            await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: true })
-            linhas.push(`✅ Presença: ${aluno.nome} (${data})`)
-          }
+          if (acao.tipo === "lancar_nota") {
+            if (!acao.aluno_id) {
+              linhas.push(`⚠️ Aluno não encontrado: ${acao.aluno_nome || "desconhecido"}`)
+              continue
+            }
+            await supabase.from("notas").upsert({
+              aluno_id: acao.aluno_id,
+              disciplina: acao.disciplina || "Química",
+              valor: acao.valor,
+              descricao: acao.descricao || "",
+              bimestre: acao.bimestre || 1,
+            }, { onConflict: "aluno_id,disciplina,bimestre" })
+            linhas.push(`📝 ${acao.aluno_nome}: ${acao.valor}`)
+          } else if (acao.tipo === "marcar_falta" && acao.alunos) {
+            for (const aluno of acao.alunos) {
+              const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
+              if (!alunoId) continue
+              const data = acao.data || new Date().toISOString().split("T")[0]
+              await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: false }, { onConflict: "aluno_id,data" })
+              linhas.push(`❌ Falta: ${aluno.nome} (${data})`)
+            }
+          } else if (acao.tipo === "marcar_presenca" && acao.alunos) {
+            for (const aluno of acao.alunos) {
+              const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
+              if (!alunoId) continue
+              const data = acao.data || new Date().toISOString().split("T")[0]
+              await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: true }, { onConflict: "aluno_id,data" })
+              linhas.push(`✅ Presença: ${aluno.nome} (${data})`)
+            }
         } else if (acao.tipo === "adicionar_aluno") {
           let escolaId = escola?.id
           if (acao.escola) {
@@ -198,7 +195,7 @@ export default function Pati() {
             if (e) setEscola(e)
           }
           await criarAluno({ nome: acao.nome, turma_nome: acao.turma, escola_id: escolaId })
-          const alunosAtualizados = await import("@/services/alunos").then(m => m.getAlunos(escola.id))
+          const alunosAtualizados = await import("@/services/alunos").then(m => m.getAlunos(escolaId))
           setAlunos(alunosAtualizados)
           linhas.push(`✅ Aluno adicionado: ${acao.nome} (${acao.turma})`)
         } else if (acao.tipo === "remover_aluno") {

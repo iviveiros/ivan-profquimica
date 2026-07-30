@@ -1,7 +1,7 @@
 "use client"
 
 import { supabase } from "@/lib/supabase"
-import { safeQuery, safeMutate } from "./supabase"
+import { safeQuery, safeMutate, safeSingle } from "./supabase"
 
 export type AulaResumo = { id: string; topico: string; created_at: string }
 
@@ -13,13 +13,13 @@ export type AulaCompleta = {
 }
 
 export async function getAula(id: string): Promise<AulaCompleta | null> {
-  const { data, error } = await supabase
-    .from("aulas")
-    .select("*, turmas(nome, ano), sistemas_ensino(nome)")
-    .eq("id", id)
-    .single()
-  if (error) throw error
-  return data as unknown as AulaCompleta
+  return safeSingle<AulaCompleta>(() =>
+    supabase
+      .from("aulas")
+      .select("*, turmas(nome, ano), sistemas_ensino(nome)")
+      .eq("id", id)
+      .single()
+  )
 }
 
 export async function atualizarAula(id: string, dados: { resumo_md?: string; exercicios_md?: string; avaliacao_md?: string; topico?: string }) {
@@ -35,10 +35,6 @@ export async function removerAula(id: string) {
 }
 
 export async function getAulasCount(): Promise<number> {
-  const data = await safeQuery<{ id: string }>(() =>
-    supabase.from("aulas").select("id", { count: "exact", head: true }) as any
-  )
-  // count is not returned from safeQuery for head:true, so we need special handling
   const { count, error } = await supabase.from("aulas").select("*", { count: "exact", head: true })
   if (error) throw error
   return count || 0
