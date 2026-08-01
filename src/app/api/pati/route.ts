@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY
-const GROQ_MODELS = ["llama-4-scout-17b-16e-instruct", "llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]
+const GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 
 // In-memory rate limiter: max 10 requests per minute per IP
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -97,6 +97,7 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
   // Try Groq models first (rotate on 429), fall back to Gemini
   let content = ""
   let groqSuccess = false
+  let ultimoErro = ""
   for (const model of GROQ_MODELS) {
     try {
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -114,13 +115,13 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
         groqSuccess = true
         break
       }
-      // 429 = rate limited, try next model
-      if (res.status !== 429) {
-        throw new Error(`Groq error: ${res.status}`)
-      }
+      ultimoErro = `Groq ${model} HTTP ${res.status}`
+      console.warn(ultimoErro, res.status === 429 ? "(rate limit)" : "")
+      // 429 = rate limited, try next model; other errors (model inválido/decomissionado) também continuam
     } catch (groqErr: any) {
-      if (groqErr.message?.includes("429")) continue
-      throw groqErr
+      ultimoErro = `Groq ${model} ${groqErr.message}`
+      console.warn(ultimoErro)
+      continue
     }
   }
 
@@ -138,7 +139,7 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
   // All Groq models exhausted, try Gemini
   const gemKey = process.env.GEMINI_API_KEY
   if (gemKey) {
-    const geminiModels = ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"]
+    const geminiModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
     for (const modelName of geminiModels) {
       try {
         const geminiMessages = messages.map(m => ({
@@ -171,7 +172,7 @@ IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
   }
 
   if (!groqSuccess) {
-    return NextResponse.json({ type: "erro", mensagem: `Groq e Gemini sem resposta. Aguarde 1 minuto e tente de novo.` })
+    return NextResponse.json({ type: "erro", mensagem: `Groq e Gemini sem resposta${ultimoErro ? ` (${ultimoErro})` : ""}. Aguarde 1 minuto e tente de novo.` })
   }
 
   const parsed = extrairJson(content)
