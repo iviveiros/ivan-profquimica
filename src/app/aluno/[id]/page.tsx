@@ -10,6 +10,7 @@ import type { AlunoBasico } from "@/services/alunos"
 import type { FaltaHistorico } from "@/services/faltas"
 import type { NotaRegistro } from "@/services/notas"
 import { ServiceError } from "@/services/supabase"
+import { formatarDataBR } from "@/lib/dates"
 
 export default function AlunoPerfil() {
   const params = useParams()
@@ -34,7 +35,10 @@ export default function AlunoPerfil() {
         getFaltasDoAluno(id),
         getNotasDoAluno(id),
       ])
-      if (!a) return
+      if (!a) {
+        setErro("Aluno não encontrado")
+        return
+      }
       setAluno(a)
       setFaltas(f)
       setNotas(n)
@@ -147,7 +151,7 @@ export default function AlunoPerfil() {
               <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
                 {faltas.map((f, i) => (
                   <div key={i} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50">
-                    <span className="text-sm text-slate-600">{new Date(f.data).toLocaleDateString("pt-BR")}</span>
+                    <span className="text-sm text-slate-600">{formatarDataBR(f.data)}</span>
                     <span className={`badge ${f.presente ? "badge-emerald" : "badge-amber"}`}>
                       {f.presente ? "✅ Presente" : "❌ Falta"}
                     </span>

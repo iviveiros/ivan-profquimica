@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { getEscolas } from "@/services/escolas"
 import { getAlunosDaTurma, atualizarAluno, removerAlunoCompleto } from "@/services/alunos"
 import { getFaltas, salvarFalta, marcarTodosPresentes } from "@/services/faltas"
 import { getTurmasDaEscola } from "@/services/turmas"
+import { dataHojeBR, formatarDataBR } from "@/lib/dates"
 import type { AlunoBasico } from "@/services/alunos"
 
 type FaltasMap = Record<string, boolean>
@@ -17,7 +18,7 @@ export default function Faltas() {
   const [escolaNome, setEscolaNome] = useState("")
   const [turma, setTurma] = useState("")
   const [turmasDisponiveis, setTurmasDisponiveis] = useState<string[]>([])
-  const [data, setData] = useState(new Date().toISOString().split("T")[0])
+  const [data, setData] = useState(dataHojeBR())
   const [faltas, setFaltas] = useState<FaltasMap>({})
   const [salvo, setSalvo] = useState(false)
   const [todasPresentes, setTodasPresentes] = useState(true)
@@ -26,6 +27,7 @@ export default function Faltas() {
   const [editTurma, setEditTurma] = useState("")
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [erro, setErro] = useState("")
+  const seqRef = useRef(0)
 
   useEffect(() => {
     getEscolas().then(data => {
@@ -35,6 +37,7 @@ export default function Faltas() {
 
   useEffect(() => {
     if (!escolaId) return
+    const seq = ++seqRef.current
     const e = escolas.find(x => x.id === escolaId)
     if (e) setEscolaNome(e.nome)
     setTurma("")
@@ -44,6 +47,7 @@ export default function Faltas() {
       getAlunosDaTurma(escolaId, ""),
       getTurmasDaEscola(escolaId),
     ]).then(([alunosData, turmasData]) => {
+      if (seq !== seqRef.current) return
       setAlunos(alunosData)
       const nomes = turmasData.map(t => t.nome)
       setTurmasDisponiveis(nomes)
@@ -52,22 +56,27 @@ export default function Faltas() {
 
   useEffect(() => {
     if (!turma || !data || !escolaId) return
+    const seq = ++seqRef.current
     getAlunosDaTurma(escolaId, turma).then(data => {
+      if (seq !== seqRef.current) return
       setAlunos(data)
       carregarFaltas(data)
     }).catch(e => setErro("Erro ao carregar alunos da turma"))
   }, [turma, data])
 
   async function carregarFaltas(alunosList: AlunoBasico[]) {
+    const seq = seqRef.current
     const ids = alunosList.map(a => a.id)
     if (!ids.length) return
     try {
       const registros = await getFaltas(ids, data)
+      if (seq !== seqRef.current) return
       const map: FaltasMap = {}
       for (const r of registros) map[r.aluno_id] = r.presente
       setFaltas(map)
       setTodasPresentes(Object.values(map).every(v => v !== false))
     } catch (e) {
+      if (seq !== seqRef.current) return
       setErro("Erro ao carregar faltas")
     }
   }
@@ -76,8 +85,11 @@ export default function Faltas() {
     setErro("")
     try {
       await salvarFalta(alunoId, data, presente)
-      setFaltas(prev => ({ ...prev, [alunoId]: presente }))
-      setTodasPresentes(Object.values({ ...faltas, [alunoId]: presente }).every(v => v !== false))
+      setFaltas(prev => {
+        const novo = { ...prev, [alunoId]: presente }
+        setTodasPresentes(Object.values(novo).every(v => v !== false))
+        return novo
+      })
       setSalvo(true)
       setTimeout(() => setSalvo(false), 2000)
     } catch (e) {
@@ -124,7 +136,7 @@ export default function Faltas() {
         .assinatura div { margin-top: 60pt; border-top: 1px solid #999; display: inline-block; padding: 0 40pt; }
       </style></head><body>
       <h1>CHAMADA — ${escolaNome}</h1>
-      <h2>${turma} · ${new Date(data).toLocaleDateString("pt-BR")}</h2>
+      <h2>${turma} · ${formatarDataBR(data)}</h2>
       <h3>✅ Presentes (${presentes.length})</h3>
       <table><tr><th class="num">Nº</th><th>Nome</th><th class="check">Presente</th></tr>
       ${presentes.map((a, i) => `<tr><td class="num">${i + 1}</td><td>${a.nome}</td><td class="check presente">✓</td></tr>`).join("")}

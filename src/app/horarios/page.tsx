@@ -275,7 +275,7 @@ export default function Horarios() {
                           className={`group relative rounded-xl border ${cores.bg} ${cores.border} cursor-default transition-all duration-150`}>
                           {/* School header bar */}
                           <div className={`rounded-t-xl px-3 py-1 text-[11px] font-extrabold tracking-wider uppercase border-b ${escolaCor}`}>
-                            {item.escola === "IEFA" ? "🏫 IEFA" : "🏫 OBJETIVO"}
+                            🏫 {item.escola}
                           </div>
                           <div className="absolute top-1 -right-2 rounded-full bg-zinc-800 border border-zinc-700 px-2 py-0.5 text-[11px] font-bold text-white shadow-md">
                             {item.aula.inicio}–{item.aula.fim}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { getEscolas } from "@/services/escolas"
 import { getAlunosDaTurma, atualizarAluno, removerAlunoCompleto } from "@/services/alunos"
@@ -17,7 +17,7 @@ export default function Notas() {
   const [turma, setTurma] = useState("")
   const [turmasDisponiveis, setTurmasDisponiveis] = useState<string[]>([])
   const [disciplina, setDisciplina] = useState("Química")
-  const [bimestre, setBimestre] = useState(1)
+  const [bimestre, setBimestre] = useState(Math.floor(new Date().getMonth() / 3) + 1)
   const [notas, setNotas] = useState<Record<string, string>>({})
   const [descricoes, setDescricoes] = useState<Record<string, string>>({})
   const [editAluno, setEditAluno] = useState<string | null>(null)
@@ -29,6 +29,7 @@ export default function Notas() {
   const [editTurma, setEditTurma] = useState("")
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [erro, setErro] = useState("")
+  const seqRef = useRef(0)
 
   useEffect(() => {
     getEscolas().then(data => {
@@ -38,6 +39,7 @@ export default function Notas() {
 
   useEffect(() => {
     if (!escolaId) return
+    const seq = ++seqRef.current
     setTurma("")
     setAlunos([])
     setTurmasDisponiveis([])
@@ -45,6 +47,7 @@ export default function Notas() {
       getAlunosDaTurma(escolaId, ""),
       getTurmasDaEscola(escolaId),
     ]).then(([alunosData, turmasData]) => {
+      if (seq !== seqRef.current) return
       setAlunos(alunosData)
       setTurmasDisponiveis(turmasData.map(t => t.nome))
     }).catch(e => setErro("Erro ao carregar dados"))
@@ -56,19 +59,23 @@ export default function Notas() {
   }, [turma, disciplina, bimestre])
 
   async function carregarNotas() {
+    const seq = ++seqRef.current
     setErro("")
     try {
       const alunosTurma = await getAlunosDaTurma(escolaId, turma)
+      if (seq !== seqRef.current) return
       setAlunos(alunosTurma)
       if (!alunosTurma.length) return
       const ids = alunosTurma.map(a => a.id)
       const registros = await getNotas(ids, disciplina, bimestre)
+      if (seq !== seqRef.current) return
       const mapV: Record<string, string> = {}
       const mapD: Record<string, string> = {}
       for (const r of registros) { mapV[r.aluno_id] = r.valor; mapD[r.aluno_id] = r.descricao || "" }
       setNotas(mapV)
       setDescricoes(mapD)
     } catch (e) {
+      if (seq !== seqRef.current) return
       setErro("Erro ao carregar notas")
     }
   }

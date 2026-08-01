@@ -5,7 +5,8 @@ import { getEscolas } from "@/services/escolas"
 import { getGrade, salvarGrade } from "@/services/horarios"
 import type { Grade } from "@/services/horarios"
 import { supabase } from "@/lib/supabase"
-import { criarAluno, removerAluno } from "@/services/alunos"
+import { criarAluno, removerAlunoCompleto } from "@/services/alunos"
+import { dataHojeBR } from "@/lib/dates"
 
 type Message = {
   role: "user" | "assistant"
@@ -147,6 +148,7 @@ export default function Pati() {
 
   async function executarAcoes(acoes: any[]): Promise<string> {
     const linhas: string[] = []
+    const bimestreAtual = Math.floor(new Date().getMonth() / 3) + 1
     for (let acao of acoes) {
       acao = normalizarAcao(acao)
       if (!acao.tipo) continue
@@ -161,14 +163,14 @@ export default function Pati() {
               disciplina: acao.disciplina || "Química",
               valor: acao.valor,
               descricao: acao.descricao || "",
-              bimestre: acao.bimestre || 1,
+              bimestre: acao.bimestre || bimestreAtual,
             }, { onConflict: "aluno_id,disciplina,bimestre" })
             linhas.push(`📝 ${acao.aluno_nome}: ${acao.valor}`)
           } else if (acao.tipo === "marcar_falta" && acao.alunos) {
             for (const aluno of acao.alunos) {
               const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
               if (!alunoId) continue
-              const data = acao.data || new Date().toISOString().split("T")[0]
+              const data = acao.data || dataHojeBR()
               await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: false }, { onConflict: "aluno_id,data" })
               linhas.push(`❌ Falta: ${aluno.nome} (${data})`)
             }
@@ -176,7 +178,7 @@ export default function Pati() {
             for (const aluno of acao.alunos) {
               const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
               if (!alunoId) continue
-              const data = acao.data || new Date().toISOString().split("T")[0]
+              const data = acao.data || dataHojeBR()
               await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: true }, { onConflict: "aluno_id,data" })
               linhas.push(`✅ Presença: ${aluno.nome} (${data})`)
             }
@@ -205,7 +207,7 @@ export default function Pati() {
             linhas.push(`⚠️ Aluno não encontrado: ${acao.nome}`)
             continue
           }
-          await removerAluno(aluno.id)
+          await removerAlunoCompleto(aluno.id)
           const alunosAtualizados2 = alunos.filter((a: any) => a.id !== aluno.id)
           setAlunos(alunosAtualizados2)
           linhas.push(`🗑️ Aluno removido: ${aluno.nome}`)

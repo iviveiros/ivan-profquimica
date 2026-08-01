@@ -48,11 +48,17 @@ export default function CriarAula() {
       const data: ConteudoGerado = await res.json()
       setConteudo(data)
 
-      const { data: aula } = await supabase
+      const { data: aula, error: erroAula } = await supabase
         .from("aulas")
         .insert({ turma_id: Number(turmaId), sistema_id: Number(sistemaId), topico, resumo_md: data.resumo, exercicios_md: data.exercicios, avaliacao_md: data.avaliacao })
         .select().single()
-      if (aula) setAulaId(aula.id)
+      if (erroAula) {
+        console.error("Erro ao salvar aula:", erroAula)
+        alert("⚠️ Conteúdo gerado, mas NÃO foi salvo no banco: " + erroAula.message)
+        setConteudo(null)
+      } else if (aula) {
+        setAulaId(aula.id)
+      }
     } catch (err: any) {
       alert("Erro: " + err.message)
     } finally {
