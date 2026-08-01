@@ -26,7 +26,12 @@ export async function getNotasDoAluno(alunoId: string): Promise<NotaRegistro[]> 
 }
 
 export async function salvarNota(dados: { aluno_id: string; disciplina: string; valor: string; descricao: string; bimestre: number }): Promise<void> {
-  await safeMutate(() =>
-    supabase.from("notas").upsert(dados, { onConflict: "aluno_id,disciplina,bimestre" })
-  )
+  try {
+    await safeMutate(() =>
+      supabase.from("notas").upsert(dados, { onConflict: "aluno_id,disciplina,bimestre" })
+    )
+  } catch {
+    await safeMutate(() => supabase.from("notas").delete().eq("aluno_id", dados.aluno_id).eq("disciplina", dados.disciplina).eq("bimestre", dados.bimestre))
+    await safeMutate(() => supabase.from("notas").insert(dados))
+  }
 }

@@ -157,20 +157,36 @@ export default function Pati() {
               linhas.push(`⚠️ Aluno não encontrado: ${acao.aluno_nome || "desconhecido"}`)
               continue
             }
-            await supabase.from("notas").upsert({
-              aluno_id: acao.aluno_id,
-              disciplina: acao.disciplina || "Química",
-              valor: acao.valor,
-              descricao: acao.descricao || "",
-              bimestre: acao.bimestre || bimestreAtual,
-            }, { onConflict: "aluno_id,disciplina,bimestre" })
+            try {
+              await supabase.from("notas").upsert({
+                aluno_id: acao.aluno_id,
+                disciplina: acao.disciplina || "Química",
+                valor: acao.valor,
+                descricao: acao.descricao || "",
+                bimestre: acao.bimestre || bimestreAtual,
+              }, { onConflict: "aluno_id,disciplina,bimestre" })
+            } catch {
+              await supabase.from("notas").delete().eq("aluno_id", acao.aluno_id).eq("disciplina", acao.disciplina || "Química").eq("bimestre", acao.bimestre || bimestreAtual)
+              await supabase.from("notas").insert({
+                aluno_id: acao.aluno_id,
+                disciplina: acao.disciplina || "Química",
+                valor: acao.valor,
+                descricao: acao.descricao || "",
+                bimestre: acao.bimestre || bimestreAtual,
+              })
+            }
             linhas.push(`📝 ${acao.aluno_nome}: ${acao.valor}`)
           } else if (acao.tipo === "marcar_falta" && acao.alunos) {
             for (const aluno of acao.alunos) {
               const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
               if (!alunoId) continue
               const data = acao.data || dataHojeBR()
-              await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: false }, { onConflict: "aluno_id,data" })
+              try {
+                await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: false }, { onConflict: "aluno_id,data" })
+              } catch {
+                await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
+                await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: false })
+              }
               linhas.push(`❌ Falta: ${aluno.nome} (${data})`)
             }
           } else if (acao.tipo === "marcar_presenca" && acao.alunos) {
@@ -178,7 +194,12 @@ export default function Pati() {
               const alunoId = aluno.id || (alunos.find((a: any) => a.nome?.toLowerCase().includes((aluno.nome || "").toLowerCase()))?.id)
               if (!alunoId) continue
               const data = acao.data || dataHojeBR()
-              await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: true }, { onConflict: "aluno_id,data" })
+              try {
+                await supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente: true }, { onConflict: "aluno_id,data" })
+              } catch {
+                await supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data)
+                await supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: true })
+              }
               linhas.push(`✅ Presença: ${aluno.nome} (${data})`)
             }
         } else if (acao.tipo === "adicionar_aluno") {

@@ -20,15 +20,26 @@ export async function getFaltasDoAluno(alunoId: string): Promise<FaltaHistorico[
 }
 
 export async function salvarFalta(alunoId: string, data: string, presente: boolean): Promise<void> {
-  await safeMutate(() =>
-    supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente }, { onConflict: "aluno_id,data" })
-  )
+  try {
+    await safeMutate(() =>
+      supabase.from("faltas").upsert({ aluno_id: alunoId, data, presente }, { onConflict: "aluno_id,data" })
+    )
+  } catch {
+    await safeMutate(() => supabase.from("faltas").delete().eq("aluno_id", alunoId).eq("data", data))
+    if (!presente) {
+      await safeMutate(() => supabase.from("faltas").insert({ aluno_id: alunoId, data, presente: false }))
+    }
+  }
 }
 
 export async function marcarTodosPresentes(alunoIds: string[], data: string): Promise<void> {
   if (!alunoIds.length) return
   const records = alunoIds.map(id => ({ aluno_id: id, data, presente: true }))
-  await safeMutate(() => supabase.from("faltas").upsert(records, { onConflict: "aluno_id,data" }))
+  try {
+    await safeMutate(() => supabase.from("faltas").upsert(records, { onConflict: "aluno_id,data" }))
+  } catch {
+    await safeMutate(() => supabase.from("faltas").delete().in("aluno_id", alunoIds).eq("data", data))
+  }
 }
 
 export async function salvarMultiplasFaltas(dados: { aluno_id: string; data: string; presente: boolean }[]): Promise<void> {
