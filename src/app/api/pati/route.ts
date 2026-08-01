@@ -72,6 +72,7 @@ REGRAS:
 - REMOVER ALUNO: precisa nome do aluno. A Pati encontra o ID automaticamente.
 - FALTAS: precisa nome, turma, data (padrão ${hoje})
 - LISTAR: type="resposta" com acao listar_alunos + turma (opcional)
+- CONSULTAR FALTAS: type="resposta" com acao consultar_faltas + turma (opcional) e data (opcional, padrão hoje). Ex: "quem faltou ontem" → data=DATA, "quem faltou no 2 ano" → turma=TURMA
 - SORTEAR: type="resposta" com acao sortear_aluno + turma (opcional)
 - HORARIOS: type="resposta" com acao consultar_horarios + dia (opcional). Se "hoje" ou sem dia, usa o dia atual. Se pergunta sobre "proxima aula", inclua "proxima":true na acao.
 - ADICIONAR AULA: type="confirmacao" com acao adicionar_aula + dia, inicio, fim, materia, turma. Ex: "adicionar aula de Quimica na segunda as 08h"
@@ -84,7 +85,7 @@ REGRAS:
 - Usuário confirmar → type="executar" com mesmas acoes
 
 RESPONDA APENAS ESTE JSON (sem markdown, sem texto extra):
-{"type":"pergunta"|"confirmacao"|"executar"|"resposta","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"},{"tipo":"listar_alunos","turma":"TURMA"},{"tipo":"sortear_aluno","turma":"TURMA"},{"tipo":"consultar_horarios","dia":"segunda|terca|quarta|quinta|sexta","proxima":true},{"tipo":"adicionar_aluno","nome":"NOME COMPLETO","turma":"TURMA","escola":"NOME DA ESCOLA (opcional)"},{"tipo":"remover_aluno","nome":"NOME COMPLETO","turma":"TURMA (opcional)"},{"tipo":"adicionar_aula","dia":"segunda","inicio":"07:10","fim":"08:00","materia":"Quimica","turma":"9 Ano A"},{"tipo":"editar_aula","dia":"terca","indice":2,"materia":"Quimica"},{"tipo":"remover_aula","dia":"quinta","indice":0}]}
+{"type":"pergunta"|"confirmacao"|"executar"|"resposta","mensagem":"texto amigavel","acoes":[{"tipo":"lancar_nota","aluno_id":"ID","aluno_nome":"NOME","turma":"TURMA","valor":"NOTA","descricao":"DESC","bimestre":NUM},{"tipo":"marcar_falta","alunos":[{"id":"ID","nome":"NOME"}],"data":"DATA"},{"tipo":"listar_alunos","turma":"TURMA"},{"tipo":"consultar_faltas","turma":"TURMA","data":"DATA (opcional)"},{"tipo":"sortear_aluno","turma":"TURMA"},{"tipo":"consultar_horarios","dia":"segunda|terca|quarta|quinta|sexta","proxima":true},{"tipo":"adicionar_aluno","nome":"NOME COMPLETO","turma":"TURMA","escola":"NOME DA ESCOLA (opcional)"},{"tipo":"remover_aluno","nome":"NOME COMPLETO","turma":"TURMA (opcional)"},{"tipo":"adicionar_aula","dia":"segunda","inicio":"07:10","fim":"08:00","materia":"Quimica","turma":"9 Ano A"},{"tipo":"editar_aula","dia":"terca","indice":2,"materia":"Quimica"},{"tipo":"remover_aula","dia":"quinta","indice":0}]}
 
 IMPORTANTE: Use os IDs reais dos alunos da lista! Não invente IDs.`
 

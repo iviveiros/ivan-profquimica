@@ -7,7 +7,6 @@ import type { Grade } from "@/services/horarios"
 import { supabase } from "@/lib/supabase"
 import { criarAluno, removerAlunoCompleto } from "@/services/alunos"
 import { dataHojeBR } from "@/lib/dates"
-
 type Message = {
   role: "user" | "assistant"
   content: string
@@ -281,6 +280,27 @@ export default function Pati() {
             linhas.push(`📋 ${filtrados.length} aluno(s):`)
             filtrados.forEach((a: any, i: number) => linhas.push(`${i + 1}. ${a.nome} (${a.turma_nome})`))
           }
+        } else if (acao.tipo === "consultar_faltas") {
+          const dataFaltas = acao.data || dataHojeBR()
+          const filtrados = acao.turma
+            ? alunos.filter((a: any) => a.turma_nome.toLowerCase() === acao.turma.toLowerCase())
+            : alunos
+          if (!filtrados.length) {
+            linhas.push(`Nenhum aluno encontrado${acao.turma ? ` na turma ${acao.turma}` : ""}.`)
+          } else {
+            const ids = filtrados.map((a: any) => a.id)
+            const registros = await import("@/services/faltas").then(m => m.getFaltas(ids, dataFaltas))
+            const faltosos = filtrados.filter((a: any) => registros.some((r: any) => r.aluno_id === a.id && r.presente === false))
+            const presentes = filtrados.length - faltosos.length
+            const dataExibida = await import("@/lib/dates").then(m => m.formatarDataBR(dataFaltas))
+            if (!faltosos.length) {
+              linhas.push(`✅ ${dataExibida}: todos os ${filtrados.length} aluno(s) presentes${acao.turma ? ` (${acao.turma})` : ""}.`)
+            } else {
+              linhas.push(`❌ ${dataExibida} — ${faltosos.length} falta(s)${acao.turma ? ` (${acao.turma})` : ""}:`)
+              faltosos.forEach((a: any) => linhas.push(`   • ${a.nome} (${a.turma_nome})`))
+              if (presentes > 0) linhas.push(`\n✅ Presentes: ${presentes} aluno(s)`)
+            }
+          }
         } else if (acao.tipo === "sortear_aluno") {
           const filtrados = acao.turma
             ? alunos.filter((a: any) => a.turma_nome.toLowerCase() === acao.turma.toLowerCase())
@@ -426,6 +446,7 @@ export default function Pati() {
       if (a.tipo === "marcar_falta") return `❌ Falta: ${a.alunos?.map((x: any) => x.nome).join(", ")}`
       if (a.tipo === "marcar_presenca") return `✅ Presença: ${a.alunos?.map((x: any) => x.nome).join(", ")}`
       if (a.tipo === "listar_alunos") return `📋 Listar alunos${a.turma ? ` da turma ${a.turma}` : ""}`
+      if (a.tipo === "consultar_faltas") return `❌ Consultar faltas${a.turma ? ` da turma ${a.turma}` : ""}${a.data ? ` em ${a.data}` : ""}`
       if (a.tipo === "sortear_aluno") return `🎲 Sortear aluno${a.turma ? ` da turma ${a.turma}` : ""}`
       if (a.tipo === "consultar_horarios") return `📅 Consultar horários${a.dia ? ` de ${a.dia}` : ""}`
       if (a.tipo === "adicionar_aluno") return `👤 Adicionar aluno: ${a.nome} (${a.turma})`
@@ -468,6 +489,7 @@ export default function Pati() {
                         {a.tipo === "marcar_falta" && <>❌ Falta: {a.alunos?.map((x: any) => x.nome).join(", ")}</>}
                         {a.tipo === "marcar_presenca" && <>✅ Presença: {a.alunos?.map((x: any) => x.nome).join(", ")}</>}
                         {a.tipo === "listar_alunos" && <>📋 Listar alunos{a.turma ? ` (${a.turma})` : ""}</>}
+                        {a.tipo === "consultar_faltas" && <>❌ Consultar faltas{a.turma ? ` (${a.turma})` : ""}{a.data ? ` (${a.data})` : ""}</>}
                         {a.tipo === "sortear_aluno" && <>🎲 Sortear aluno{a.turma ? ` (${a.turma})` : ""}</>}
                         {a.tipo === "consultar_horarios" && <>📅 Horários{a.dia ? ` (${a.dia})` : ""}</>}
                         {a.tipo === "adicionar_aluno" && <>👤 Adicionar aluno: {a.nome} ({a.turma})</>}
