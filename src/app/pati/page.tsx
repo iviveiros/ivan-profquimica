@@ -301,6 +301,30 @@ export default function Pati() {
               if (presentes > 0) linhas.push(`\n✅ Presentes: ${presentes} aluno(s)`)
             }
           }
+        } else if (acao.tipo === "consultar_faltas_aluno") {
+          const nomeBusca = (acao.nome || "").toLowerCase().trim()
+          if (!nomeBusca) {
+            linhas.push("⚠️ Informe o nome do aluno.")
+          } else {
+            const aluno = alunos.find((a: any) => a.nome.toLowerCase().includes(nomeBusca))
+            if (!aluno) {
+              linhas.push(`⚠️ Aluno não encontrado: ${acao.nome}`)
+            } else {
+              const historico = await import("@/services/faltas").then(m => m.getFaltasDoAluno(aluno.id))
+              const faltas = historico.filter((f: any) => f.presente === false)
+              const presencas = historico.filter((f: any) => f.presente === true)
+              const datas = await Promise.all(historico.map((f: any) => import("@/lib/dates").then(m => m.formatarDataBR(f.data))))
+              if (!historico.length) {
+                linhas.push(`✅ **${aluno.nome}** não tem nenhum registro de chamada.`)
+              } else {
+                linhas.push(`📋 **${aluno.nome}** (${aluno.turma_nome})`)
+                linhas.push(`   ❌ Faltas: ${faltas.length} | ✅ Presenças: ${presencas.length} | 📅 Registros: ${historico.length}`)
+                if (faltas.length) {
+                  linhas.push(`\nFaltas em: ${datas.filter((_, i) => historico[i].presente === false).join(", ")}`)
+                }
+              }
+            }
+          }
         } else if (acao.tipo === "sortear_aluno") {
           const filtrados = acao.turma
             ? alunos.filter((a: any) => a.turma_nome.toLowerCase() === acao.turma.toLowerCase())
@@ -447,6 +471,7 @@ export default function Pati() {
       if (a.tipo === "marcar_presenca") return `✅ Presença: ${a.alunos?.map((x: any) => x.nome).join(", ")}`
       if (a.tipo === "listar_alunos") return `📋 Listar alunos${a.turma ? ` da turma ${a.turma}` : ""}`
       if (a.tipo === "consultar_faltas") return `❌ Consultar faltas${a.turma ? ` da turma ${a.turma}` : ""}${a.data ? ` em ${a.data}` : ""}`
+      if (a.tipo === "consultar_faltas_aluno") return `❌ Faltas do aluno: ${a.nome}`
       if (a.tipo === "sortear_aluno") return `🎲 Sortear aluno${a.turma ? ` da turma ${a.turma}` : ""}`
       if (a.tipo === "consultar_horarios") return `📅 Consultar horários${a.dia ? ` de ${a.dia}` : ""}`
       if (a.tipo === "adicionar_aluno") return `👤 Adicionar aluno: ${a.nome} (${a.turma})`
@@ -490,6 +515,7 @@ export default function Pati() {
                         {a.tipo === "marcar_presenca" && <>✅ Presença: {a.alunos?.map((x: any) => x.nome).join(", ")}</>}
                         {a.tipo === "listar_alunos" && <>📋 Listar alunos{a.turma ? ` (${a.turma})` : ""}</>}
                         {a.tipo === "consultar_faltas" && <>❌ Consultar faltas{a.turma ? ` (${a.turma})` : ""}{a.data ? ` (${a.data})` : ""}</>}
+                        {a.tipo === "consultar_faltas_aluno" && <>❌ Faltas do aluno: {a.nome}</>}
                         {a.tipo === "sortear_aluno" && <>🎲 Sortear aluno{a.turma ? ` (${a.turma})` : ""}</>}
                         {a.tipo === "consultar_horarios" && <>📅 Horários{a.dia ? ` (${a.dia})` : ""}</>}
                         {a.tipo === "adicionar_aluno" && <>👤 Adicionar aluno: {a.nome} ({a.turma})</>}
